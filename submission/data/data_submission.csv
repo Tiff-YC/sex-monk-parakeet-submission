@@ -1,0 +1,249 @@
+groupID,actor,subject,nevents,actor.sex,subject.sex,dyad.sex1,dyad.sex2,dyad.sex3
+G1,BBO,GOP,17,Female,Male,female-male,opposite sex,opposite sex
+G1,BBO,OGG,16,Female,Female,female-female,female-female,same sex
+G1,BBO,OPP,14,Female,Female,female-female,female-female,same sex
+G1,BBO,PGG,37,Female,Male,female-male,opposite sex,opposite sex
+G1,BBO,POG,57,Female,Female,female-female,female-female,same sex
+G1,BBO,POO,33,Female,Female,female-female,female-female,same sex
+G1,BBO,POP,14,Female,Male,female-male,opposite sex,opposite sex
+G1,BBO,PPO,26,Female,Male,female-male,opposite sex,opposite sex
+G1,GOP,OPP,176,Male,Female,male-female,opposite sex,opposite sex
+G1,GOP,POG,85,Male,Female,male-female,opposite sex,opposite sex
+G1,GOP,POO,1,Male,Female,male-female,opposite sex,opposite sex
+G1,GOP,POP,241,Male,Male,male-male,male-male,same sex
+G1,GOP,PPO,88,Male,Male,male-male,male-male,same sex
+G1,OGG,OPP,338,Female,Female,female-female,female-female,same sex
+G1,OGG,POG,38,Female,Female,female-female,female-female,same sex
+G1,OGG,POP,319,Female,Male,female-male,opposite sex,opposite sex
+G1,OGG,PPO,67,Female,Male,female-male,opposite sex,opposite sex
+G1,OPP,POG,8,Female,Female,female-female,female-female,same sex
+G1,OPP,POP,1,Female,Male,female-male,opposite sex,opposite sex
+G1,OPP,PPO,21,Female,Male,female-male,opposite sex,opposite sex
+G1,PGG,GOP,53,Male,Male,male-male,male-male,same sex
+G1,PGG,OGG,49,Male,Female,male-female,opposite sex,opposite sex
+G1,PGG,OPP,51,Male,Female,male-female,opposite sex,opposite sex
+G1,PGG,POG,31,Male,Female,male-female,opposite sex,opposite sex
+G1,PGG,POO,1,Male,Female,male-female,opposite sex,opposite sex
+G1,PGG,POP,43,Male,Male,male-male,male-male,same sex
+G1,PGG,PPO,48,Male,Male,male-male,male-male,same sex
+G1,POG,BBO,1,Female,Female,female-female,female-female,same sex
+G1,POG,GOP,1,Female,Male,female-male,opposite sex,opposite sex
+G1,POG,OPP,5,Female,Female,female-female,female-female,same sex
+G1,POG,POP,1,Female,Male,female-male,opposite sex,opposite sex
+G1,POO,GOP,36,Female,Male,female-male,opposite sex,opposite sex
+G1,POO,OGG,27,Female,Female,female-female,female-female,same sex
+G1,POO,OPP,20,Female,Female,female-female,female-female,same sex
+G1,POO,PGG,2,Female,Male,female-male,opposite sex,opposite sex
+G1,POO,POG,62,Female,Female,female-female,female-female,same sex
+G1,POO,POP,28,Female,Male,female-male,opposite sex,opposite sex
+G1,POO,PPO,22,Female,Male,female-male,opposite sex,opposite sex
+G1,POP,OPP,1,Male,Female,male-female,opposite sex,opposite sex
+G1,POP,POG,63,Male,Female,male-female,opposite sex,opposite sex
+G1,POP,PPO,68,Male,Male,male-male,male-male,same sex
+G1,PPO,OPP,9,Male,Female,male-female,opposite sex,opposite sex
+G1,PPO,PGG,1,Male,Male,male-male,male-male,same sex
+G1,PPO,POP,1,Male,Male,male-male,male-male,same sex
+G1,PPP,GOP,36,Male,Male,male-male,male-male,same sex
+G1,PPP,OGG,25,Male,Female,male-female,opposite sex,opposite sex
+G1,PPP,OPP,22,Male,Female,male-female,opposite sex,opposite sex
+G1,PPP,PGG,72,Male,Male,male-male,male-male,same sex
+G1,PPP,POG,39,Male,Female,male-female,opposite sex,opposite sex
+G1,PPP,POO,57,Male,Female,male-female,opposite sex,opposite sex
+G1,PPP,POP,11,Male,Male,male-male,male-male,same sex
+G1,PPP,PPO,48,Male,Male,male-male,male-male,same sex
+G2,BOO,BPO,1,Male,Female,male-female,opposite sex,opposite sex
+G2,BOO,GOO,1,Male,Female,male-female,opposite sex,opposite sex
+G2,BOO,GPO,1,Male,Female,male-female,opposite sex,opposite sex
+G2,BOO,OPO,2,Male,Female,male-female,opposite sex,opposite sex
+G2,BPO,BOO,15,Female,Male,female-male,opposite sex,opposite sex
+G2,BPO,GOO,33,Female,Female,female-female,female-female,same sex
+G2,BPO,GPG,44,Female,Male,female-male,opposite sex,opposite sex
+G2,BPO,GPO,27,Female,Female,female-female,female-female,same sex
+G2,BPO,OBO,25,Female,Male,female-male,opposite sex,opposite sex
+G2,BPO,OBP,21,Female,Female,female-female,female-female,same sex
+G2,BPO,OOO,9,Female,Male,female-male,opposite sex,opposite sex
+G2,BPO,OPO,10,Female,Female,female-female,female-female,same sex
+G2,BPO,PGP,1,Female,Male,female-male,opposite sex,opposite sex
+G2,GOO,BOO,6,Female,Male,female-male,opposite sex,opposite sex
+G2,GOO,OBO,1,Female,Male,female-male,opposite sex,opposite sex
+G2,GOO,OBP,1,Female,Female,female-female,female-female,same sex
+G2,GOO,OPO,23,Female,Female,female-female,female-female,same sex
+G2,GPG,BOO,44,Male,Male,male-male,male-male,same sex
+G2,GPG,GOO,3,Male,Female,male-female,opposite sex,opposite sex
+G2,GPG,OBO,1,Male,Male,male-male,male-male,same sex
+G2,GPG,OPO,20,Male,Female,male-female,opposite sex,opposite sex
+G2,GPO,BOO,2,Female,Male,female-male,opposite sex,opposite sex
+G2,GPO,GOO,54,Female,Female,female-female,female-female,same sex
+G2,GPO,GPG,42,Female,Male,female-male,opposite sex,opposite sex
+G2,GPO,OBP,9,Female,Female,female-female,female-female,same sex
+G2,GPO,OOO,10,Female,Male,female-male,opposite sex,opposite sex
+G2,GPO,OPO,5,Female,Female,female-female,female-female,same sex
+G2,OBO,BOO,9,Male,Male,male-male,male-male,same sex
+G2,OBO,GOO,19,Male,Female,male-female,opposite sex,opposite sex
+G2,OBO,GPG,36,Male,Male,male-male,male-male,same sex
+G2,OBO,OBP,9,Male,Female,male-female,opposite sex,opposite sex
+G2,OBO,OOO,11,Male,Male,male-male,male-male,same sex
+G2,OBO,OPO,7,Male,Female,male-female,opposite sex,opposite sex
+G2,OBP,BOO,82,Female,Male,female-male,opposite sex,opposite sex
+G2,OBP,GOO,254,Female,Female,female-female,female-female,same sex
+G2,OBP,GPG,87,Female,Male,female-male,opposite sex,opposite sex
+G2,OBP,GPO,3,Female,Female,female-female,female-female,same sex
+G2,OBP,OBO,1,Female,Male,female-male,opposite sex,opposite sex
+G2,OBP,OPO,76,Female,Female,female-female,female-female,same sex
+G2,OBP,PGP,2,Female,Male,female-male,opposite sex,opposite sex
+G2,OOO,BOO,42,Male,Male,male-male,male-male,same sex
+G2,OOO,GOO,41,Male,Female,male-female,opposite sex,opposite sex
+G2,OOO,GPG,54,Male,Male,male-male,male-male,same sex
+G2,OOO,GPO,5,Male,Female,male-female,opposite sex,opposite sex
+G2,OOO,OBO,1,Male,Male,male-male,male-male,same sex
+G2,OOO,OPO,35,Male,Female,male-female,opposite sex,opposite sex
+G2,OPO,BOO,1,Female,Male,female-male,opposite sex,opposite sex
+G2,PGP,BOO,55,Male,Male,male-male,male-male,same sex
+G2,PGP,GOO,27,Male,Female,male-female,opposite sex,opposite sex
+G2,PGP,GPG,23,Male,Male,male-male,male-male,same sex
+G2,PGP,GPO,38,Male,Female,male-female,opposite sex,opposite sex
+G2,PGP,OBO,16,Male,Male,male-male,male-male,same sex
+G2,PGP,OBP,22,Male,Female,male-female,opposite sex,opposite sex
+G2,PGP,OOO,23,Male,Male,male-male,male-male,same sex
+G2,PGP,OPO,14,Male,Female,male-female,opposite sex,opposite sex
+G3,BBG,CPG,13,Male,Female,male-female,opposite sex,opposite sex
+G3,BBG,IOG,14,Male,Female,male-female,opposite sex,opposite sex
+G3,BBG,PGO,38,Male,Male,male-male,male-male,same sex
+G3,BBG,PPI,13,Male,Female,male-female,opposite sex,opposite sex
+G3,BII,BBG,4,Male,Male,male-male,male-male,same sex
+G3,BII,CPG,8,Male,Female,male-female,opposite sex,opposite sex
+G3,BII,IOG,2,Male,Female,male-female,opposite sex,opposite sex
+G3,BII,PGO,8,Male,Male,male-male,male-male,same sex
+G3,BII,PPI,6,Male,Female,male-female,opposite sex,opposite sex
+G3,COP,BBG,86,Female,Male,female-male,opposite sex,opposite sex
+G3,COP,BII,2,Female,Male,female-male,opposite sex,opposite sex
+G3,COP,CPG,63,Female,Female,female-female,female-female,same sex
+G3,COP,PGO,3,Female,Male,female-male,opposite sex,opposite sex
+G3,COP,PPI,44,Female,Female,female-female,female-female,same sex
+G3,CPG,BBG,1,Female,Male,female-male,opposite sex,opposite sex
+G3,CPG,IOG,2,Female,Female,female-female,female-female,same sex
+G3,CPG,PGO,1,Female,Male,female-male,opposite sex,opposite sex
+G3,GPB,BBG,53,Male,Male,male-male,male-male,same sex
+G3,GPB,BII,5,Male,Male,male-male,male-male,same sex
+G3,GPB,COP,1,Male,Female,male-female,opposite sex,opposite sex
+G3,GPB,CPG,19,Male,Female,male-female,opposite sex,opposite sex
+G3,GPB,IOG,2,Male,Female,male-female,opposite sex,opposite sex
+G3,GPB,PGO,34,Male,Male,male-male,male-male,same sex
+G3,GPB,PIO,1,Male,Male,male-male,male-male,same sex
+G3,GPB,PPI,22,Male,Female,male-female,opposite sex,opposite sex
+G3,III,BBG,5,Female,Male,female-male,opposite sex,opposite sex
+G3,III,BII,1,Female,Male,female-male,opposite sex,opposite sex
+G3,III,COP,1,Female,Female,female-female,female-female,same sex
+G3,III,CPG,8,Female,Female,female-female,female-female,same sex
+G3,III,IOG,10,Female,Female,female-female,female-female,same sex
+G3,III,PGO,12,Female,Male,female-male,opposite sex,opposite sex
+G3,III,PPI,3,Female,Female,female-female,female-female,same sex
+G3,IOG,BBG,2,Female,Male,female-male,opposite sex,opposite sex
+G3,IOG,BII,1,Female,Male,female-male,opposite sex,opposite sex
+G3,IOG,GPB,1,Female,Male,female-male,opposite sex,opposite sex
+G3,IOG,PGO,1,Female,Male,female-male,opposite sex,opposite sex
+G3,PGO,BBG,18,Male,Male,male-male,male-male,same sex
+G3,PGO,BII,17,Male,Male,male-male,male-male,same sex
+G3,PGO,CPG,23,Male,Female,male-female,opposite sex,opposite sex
+G3,PGO,PPI,14,Male,Female,male-female,opposite sex,opposite sex
+G3,PIO,BBG,17,Male,Male,male-male,male-male,same sex
+G3,PIO,BII,2,Male,Male,male-male,male-male,same sex
+G3,PIO,COP,5,Male,Female,male-female,opposite sex,opposite sex
+G3,PIO,CPG,11,Male,Female,male-female,opposite sex,opposite sex
+G3,PIO,IOG,24,Male,Female,male-female,opposite sex,opposite sex
+G3,PIO,PGO,202,Male,Male,male-male,male-male,same sex
+G3,PIO,PPI,7,Male,Female,male-female,opposite sex,opposite sex
+G3,PPI,IOG,1,Female,Female,female-female,female-female,same sex
+G4,BOG,BPP,9,Female,Female,female-female,female-female,same sex
+G4,BOG,GBB,32,Female,Male,female-male,opposite sex,opposite sex
+G4,BOG,GOG,25,Female,Female,female-female,female-female,same sex
+G4,BOG,OIP,35,Female,Male,female-male,opposite sex,opposite sex
+G4,BPP,BOG,1,Female,Female,female-female,female-female,same sex
+G4,BPP,COI,1,Female,Male,female-male,opposite sex,opposite sex
+G4,BPP,GBB,32,Female,Male,female-male,opposite sex,opposite sex
+G4,BPP,GOG,22,Female,Female,female-female,female-female,same sex
+G4,CBB,BOG,40,Female,Female,female-female,female-female,same sex
+G4,CBB,BPP,35,Female,Female,female-female,female-female,same sex
+G4,CBB,COI,53,Female,Male,female-male,opposite sex,opposite sex
+G4,CBB,GBB,48,Female,Male,female-male,opposite sex,opposite sex
+G4,CBB,GOG,37,Female,Female,female-female,female-female,same sex
+G4,CBB,IPI,1,Female,Male,female-male,opposite sex,opposite sex
+G4,CBB,OIP,52,Female,Male,female-male,opposite sex,opposite sex
+G4,COI,BOG,1,Male,Female,male-female,opposite sex,opposite sex
+G4,COI,BPP,8,Male,Female,male-female,opposite sex,opposite sex
+G4,COI,CBB,1,Male,Female,male-female,opposite sex,opposite sex
+G4,COI,GBB,84,Male,Male,male-male,male-male,same sex
+G4,COI,GOG,50,Male,Female,male-female,opposite sex,opposite sex
+G4,COI,OIP,1,Male,Male,male-male,male-male,same sex
+G4,GIP,BOG,25,Male,Female,male-female,opposite sex,opposite sex
+G4,GIP,BPP,41,Male,Female,male-female,opposite sex,opposite sex
+G4,GIP,CBB,34,Male,Female,male-female,opposite sex,opposite sex
+G4,GIP,COI,33,Male,Male,male-male,male-male,same sex
+G4,GIP,GBB,36,Male,Male,male-male,male-male,same sex
+G4,GIP,GOG,29,Male,Female,male-female,opposite sex,opposite sex
+G4,GIP,IPI,38,Male,Male,male-male,male-male,same sex
+G4,GIP,OIP,40,Male,Male,male-male,male-male,same sex
+G4,GOG,GBB,2,Female,Male,female-male,opposite sex,opposite sex
+G4,IIB,BOG,6,Female,Female,female-female,female-female,same sex
+G4,IIB,BPP,1,Female,Female,female-female,female-female,same sex
+G4,IIB,CBB,7,Female,Female,female-female,female-female,same sex
+G4,IIB,COI,7,Female,Male,female-male,opposite sex,opposite sex
+G4,IIB,GBB,5,Female,Male,female-male,opposite sex,opposite sex
+G4,IIB,GIP,1,Female,Male,female-male,opposite sex,opposite sex
+G4,IIB,GOG,1,Female,Female,female-female,female-female,same sex
+G4,IIB,IPI,6,Female,Male,female-male,opposite sex,opposite sex
+G4,IIB,OIP,9,Female,Male,female-male,opposite sex,opposite sex
+G4,IPI,BOG,19,Male,Female,male-female,opposite sex,opposite sex
+G4,IPI,BPP,14,Male,Female,male-female,opposite sex,opposite sex
+G4,IPI,COI,12,Male,Male,male-male,male-male,same sex
+G4,IPI,GBB,17,Male,Male,male-male,male-male,same sex
+G4,IPI,GOG,8,Male,Female,male-female,opposite sex,opposite sex
+G4,IPI,OIP,11,Male,Male,male-male,male-male,same sex
+G4,OIP,BPP,3,Male,Female,male-female,opposite sex,opposite sex
+G4,OIP,GBB,45,Male,Male,male-male,male-male,same sex
+G4,OIP,GOG,54,Male,Female,male-female,opposite sex,opposite sex
+G4,OIP,IPI,1,Male,Male,male-male,male-male,same sex
+G5,BBP,GGP,7,Female,Male,female-male,opposite sex,opposite sex
+G5,BOI,BBP,10,Male,Female,male-female,opposite sex,opposite sex
+G5,BOI,BOP,13,Male,Female,male-female,opposite sex,opposite sex
+G5,BOI,COG,16,Male,Female,male-female,opposite sex,opposite sex
+G5,BOI,CPB,23,Male,Male,male-male,male-male,same sex
+G5,BOI,GGP,19,Male,Male,male-male,male-male,same sex
+G5,BOI,GPI,8,Male,Female,male-female,opposite sex,opposite sex
+G5,BOI,IBB,20,Male,Male,male-male,male-male,same sex
+G5,BOI,IGB,1,Male,Female,male-female,opposite sex,opposite sex
+G5,BOI,IIP,27,Male,Male,male-male,male-male,same sex
+G5,BOP,BBP,3,Female,Female,female-female,female-female,same sex
+G5,BOP,GGP,5,Female,Male,female-male,opposite sex,opposite sex
+G5,BOP,IBB,4,Female,Male,female-male,opposite sex,opposite sex
+G5,COG,BBP,7,Female,Female,female-female,female-female,same sex
+G5,COG,BOP,3,Female,Female,female-female,female-female,same sex
+G5,COG,GGP,5,Female,Male,female-male,opposite sex,opposite sex
+G5,COG,IBB,4,Female,Male,female-male,opposite sex,opposite sex
+G5,COG,IIP,3,Female,Male,female-male,opposite sex,opposite sex
+G5,CPB,BBP,2,Male,Female,male-female,opposite sex,opposite sex
+G5,CPB,BOP,4,Male,Female,male-female,opposite sex,opposite sex
+G5,CPB,GGP,1,Male,Male,male-male,male-male,same sex
+G5,CPB,IBB,1,Male,Male,male-male,male-male,same sex
+G5,CPB,IIP,3,Male,Male,male-male,male-male,same sex
+G5,GGP,BBP,4,Male,Female,male-female,opposite sex,opposite sex
+G5,GGP,IBB,2,Male,Male,male-male,male-male,same sex
+G5,GPI,BBP,2,Female,Female,female-female,female-female,same sex
+G5,GPI,BOP,1,Female,Female,female-female,female-female,same sex
+G5,GPI,GGP,3,Female,Male,female-male,opposite sex,opposite sex
+G5,GPI,IBB,2,Female,Male,female-male,opposite sex,opposite sex
+G5,GPI,IIP,1,Female,Male,female-male,opposite sex,opposite sex
+G5,IBB,CPB,1,Male,Male,male-male,male-male,same sex
+G5,IBB,GGP,9,Male,Male,male-male,male-male,same sex
+G5,IGB,BBP,8,Female,Female,female-female,female-female,same sex
+G5,IGB,BOP,3,Female,Female,female-female,female-female,same sex
+G5,IGB,COG,8,Female,Female,female-female,female-female,same sex
+G5,IGB,CPB,9,Female,Male,female-male,opposite sex,opposite sex
+G5,IGB,GGP,15,Female,Male,female-male,opposite sex,opposite sex
+G5,IGB,GPI,7,Female,Female,female-female,female-female,same sex
+G5,IGB,IBB,9,Female,Male,female-male,opposite sex,opposite sex
+G5,IGB,IIP,5,Female,Male,female-male,opposite sex,opposite sex
+G5,IIP,BBP,19,Male,Female,male-female,opposite sex,opposite sex
+G5,IIP,BOI,1,Male,Male,male-male,male-male,same sex
+G5,IIP,GGP,33,Male,Male,male-male,male-male,same sex
+G5,IIP,IBB,14,Male,Male,male-male,male-male,same sex

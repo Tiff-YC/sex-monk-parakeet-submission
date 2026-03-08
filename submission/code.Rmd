@@ -1,0 +1,1231 @@
+---
+title: "code_submission"
+author: "Yuchen Chen"
+date: "2026-03-08"
+output: pdf_document
+---
+
+# Set up 
+
+```{r set up, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reshape2)
+library(ggrepel)
+library(viridis)
+library(EloRating)
+library(ggpubr)
+library(lsmeans)
+library(igraph)
+library(ggnetwork)
+library(kableExtra)
+library(assortnet)
+library(broom)
+library(purrr)
+library(lme4)
+library(patchwork) 
+library(performance)
+library(gtsummary)
+library(glmmTMB)
+library(readr)
+library(statnet) 
+library(magick)
+library(ggplot2)
+library(cowplot)
+library(car)
+library(reshape2)
+library(officer)
+library(flextable)
+
+
+setwd("/Users/tiffsmac/Desktop/hobson/sex comparison project/monk.sex.comparison/submission")
+
+data_location <- "/Users/tiffsmac/Desktop/hobson/sex comparison project/monk.sex.comparison/submission/data"
+figure_output_folder <- "/Users/tiffsmac/Desktop/hobson/sex comparison project/monk.sex.comparison/submission/figures"
+table_output_folder <- "/Users/tiffsmac/Desktop/hobson/sex comparison project/monk.sex.comparison/submission/tables"
+
+
+matrix.please<-function(x) {
+        m<-as.matrix(x[,-1])
+        rownames(m)<-x[,1]
+        m
+}
+
+matrix.please <- function(df) {
+  all_ids <- union(df$actor, df$subject)
+
+  df_wide <- df %>%
+    select(actor, subject, nevents) %>%
+    complete(actor = all_ids, subject = all_ids, fill = list(nevents = 0)) %>%
+    pivot_wider(names_from = subject, values_from = nevents, values_fill = 0) 
+
+  m <- as.matrix(df_wide[,-1])
+  rownames(m) <- df_wide$actor
+  m
+}
+
+```
+
+
+# Load data
+```{r}
+all.aggWsex <-  read_csv(paste0(data_location,"/data_submission.csv"))
+
+bird.list <-  read_csv(paste0(data_location,"/bird_submission.csv"))
+
+```
+
+# Separate different groups
+```{r separate into groups}
+split_dfs <- split(all.aggWsex, all.aggWsex$groupID)
+
+names(split_dfs)  
+
+```
+
+#Calculate rank
+
+## Load springrank code from Cate/Dan 
+
+```{r springrank}
+library(igraph)
+library(Matrix)
+library(Rlinsolve)
+
+spring_rank <- function(A, alpha = 0, l0 = 1.0, l1 = 1.0,
+                        shift = TRUE, solver = Rlinsolve::lsolve.bicgstab) {
+  #' Core function for calculating SpringRank.
+  #' Default parameters follow stanadard model.
+  #'
+  #' @param A The adjacency matrix of the graph. This should be a sparse dgCMatrix;
+  #' if it isn't it will be coerced to a dgCMatrix.
+  #' @param alpha Controls the impact regularization term.
+  #' @param l0 Regularization spring's rest length.
+  #' @param l1 Interaction springs' rest length.
+  #' @param shift (Optional, default TRUE) normalize such that the lowest-ranked
+  #'  node has a SpringRank value of zero.
+  #' @param solver (Optional, default Rlinsolve::bicgstab) your preferred
+  #' solver for Ax=B. Should be able to handle dgCMatrix sparse matrices.
+  #' if the solve is not from Rlinsolve may throw a spurious warning for
+  #' unused parameters.
+  #'
+  #' @return A vector of SpringRank scores for each node. Sort or order the
+  #' vector for ordinal rankings of each node.
+  
+  if (class(A) == "matrix") {
+    # coerce dense matrix to sparse matrice so the user doesn't have to.
+    A <- as(Matrix(A, sparse = TRUE, doDiag = FALSE), "dgCMatrix")
+  } else {
+    # confirm it's the right kind of sparse matrix. might throw an error
+    # if it's one of the less common sparse matrix types.
+    A <- as(A, "dgCMatrix")
+  }
+  
+  N <- dim(A)[1]
+  k_in <- colSums(A)
+  k_out <- rowSums(A)
+  One <- as(Matrix(rep(1, N)), "dgCMatrix")
+  C <- A + t(A)
+  
+  D1 <- as(Matrix(0, ncol = N, nrow = N), "dgCMatrix")
+  D2 <- as(Matrix(0, ncol = N, nrow = N), "dgCMatrix")
+  
+  for (i in 1:N) {
+    D1[i, i] <- k_out[i] + k_in[i]
+    D2[i, i] <- l1 * (k_out[i] - k_in[i])
+  }
+  
+  if (alpha != 0) {
+    print("assuming invertible matrix")
+    
+    B = One * l0 + D2 %*% One
+    A_ = alpha * diag(nrow = N, ncol = N) + D1 - C
+  } else {
+    print("fixing a rank degree of freedom")
+    
+    C <- C +
+      matrix(rep(A[N,] , times = N),
+             ncol = N,
+             nrow = N,
+             byrow = T) +
+      matrix(rep(A[, N], times = N),
+             ncol = N,
+             nrow = N,
+             byrow = T)
+    
+    D3 <- as(Matrix(0, ncol = N, nrow = N), "dgCMatrix")
+    for (i in 1:N) {
+      D3[i, i] <- l1 * (k_out[N] - k_in[N])
+    }
+    
+    B <- D2 %*% One + D3 %*% One
+    A_ <- D1 - C
+  }
+  
+  rank <- solver(A_, B, verbose = F)
+  if (class(rank) == "list") {
+    rank <- rank$x # accomodates both Rlinsolve and Matrix solves
+  }
+  
+  if (shift) {
+    rank <- rank - min(rank)
+  }
+  
+  # coerce matrix to vector, so we can use names()
+  rank <- rank[,1]
+  names(rank) <- colnames(A)
+  return(rank)
+}
+
+
+spring_rank_network <- function(N, beta, alpha, K, l0 = 0.5, l1 = 1.0) {
+  #' Generative model for SpringRank. Builds a weighted graph with self-loops.
+  #' The model first generates node scores using a normal distribution, then
+  #' generates edges (and edge weights) from a Poisson distribution with mean
+  #' equal to the energy of the system.
+  #'
+  #' @param N The number of nodes.
+  #' @param beta Inverse temperature, a noise parameter.
+  #' @param alpha Variance of the Normal prior.
+  #' @param K The average degree of the network.
+  #' @param l0 Prior spring's rest length.
+  #' @param l1 Interaction spring's rest length.
+  #'
+  #' @return A directed graph (potentially weighted, potentially containing
+  #' self-loops)
+  
+  scores <- rnorm(N, l0, 1/sqrt(alpha*beta))
+  Z <- 0
+  for (i in 1:N) {
+    for (j in 1:N) {
+      Z <- Z + exp(-0.5 * beta * (scores[i] - scores[j] - l1)^2)
+    }
+  }
+  C <- (K*N)/Z
+  
+  # for loops are slow in R so make a matrix of element-wise subtractions,
+  # each element i, j being scores[i]-scores[j]
+  # basically, trading off increased memory usage (dense matrix) for speed.
+  scores_mat <- matrix(1, length(scores), 1) %*% t(scores)
+  scores_mat <- scores_mat - scores - l1
+  H <- .5 * scores_mat^2
+  lambda <- C * exp(-1*beta*H)
+  A <- rpois(length(scores)^2, lambda) %>% matrix(nrow = dim(lambda)[1])
+  
+  return(graph_from_adjacency_matrix(A, mode = "directed", weighted = "weight"))
+}
+```
+
+## Calculate springrank power, ordinal rank, rule breaking etc for each group
+
+```{r calculate rank}
+
+compute_springrank <- function(df) {
+  
+  agg.el <- df %>% ungroup()
+
+agg.el <- agg.el %>% select(actor, subject, subject.sex, actor.sex, nevents)
+
+    g <- graph.data.frame(agg.el)
+    g.adj <- get.adjacency(g, sparse = TRUE, attr='nevents')
+    rank_spring <- as.data.frame(spring_rank(g.adj))
+    
+    
+    rank_spring$birdID <- rownames(rank_spring)
+    colnames(rank_spring) <- c("springrank_value", "birdID")
+    rank_spring <- rank_spring %>% arrange(desc(springrank_value))
+    rank_spring$rank_springrank <- seq(1:nrow(rank_spring))
+
+    
+     rank_subjects <- rank_spring %>%
+    rename(
+      subject.power = springrank_value,
+      subject = birdID,
+      subject.rank = rank_springrank
+    )
+  
+  rank_actors <- rank_spring %>%
+    rename(
+      actor.power = springrank_value,
+      actor = birdID,
+      actor.rank = rank_springrank
+    )
+  
+  
+    df <- df %>%
+      left_join(rank_subjects, by = "subject") %>% 
+      left_join(rank_actors, by = "actor") 
+    
+    df <- df %>% 
+      mutate(power.diff = actor.power - subject.power,
+             rank.diff = actor.rank - subject.rank)
+}
+
+
+split_dfs_Wrank <- map(split_dfs, compute_springrank)
+
+G1 <- compute_springrank(split_dfs[["G1"]])
+
+G2 <- compute_springrank(split_dfs[["G2"]])
+
+G3 <- compute_springrank(split_dfs[["G3"]])
+
+G4 <- compute_springrank(split_dfs[["G4"]])
+
+G5 <- compute_springrank(split_dfs[["G5"]])
+
+
+
+```
+
+# Data cleaning
+
+rank_df_all - 50 rows of birds with power and sex
+```{r data cleaning}
+combined_df_Wrank_sexb <- bind_rows(
+  "G1" = G1,
+  "G2" = G2,
+  "G3" = G3,
+  "G4" = G4,
+  "G5" = G5,
+  .id = "groupID"
+)
+
+combined_df_Wrank_sexb %>% 
+  group_by(groupID) %>% 
+  summarise(sumagg = sum(nevents)) %>% 
+  ungroup()
+
+df1_all <- combined_df_Wrank_sexb %>%
+  distinct(birdID = actor, rank = actor.rank, power = actor.power, groupID = groupID, sex = actor.sex)
+
+df2_all <- combined_df_Wrank_sexb %>%
+  distinct(birdID = subject, rank = subject.rank, power = subject.power, groupID = groupID, sex = subject.sex)
+
+rank_df_all <- bind_rows(df1_all, df2_all) %>%
+  distinct(birdID, .keep_all = TRUE)
+
+```
+
+
+#1.Individual Level
+
+##Plotting
+
+Plot - 5 groups
+```{r individual plot, fig.width = 10, fig.height = 5}
+colrs <- c("Female" = "#F8766D", "Male" = "#00BFC4")
+
+#Aggregate nevents per actor (bird) within each group
+agg_by_actor_group <- combined_df_Wrank_sexb  %>%
+  group_by(groupID, actor, actor.sex) %>%
+  summarise(total_events = sum(nevents), .groups = "drop")
+
+#There is a bird never becomes aggressor
+agg_by_actor_group  <- rank_df_all %>% 
+  left_join(agg_by_actor_group, join_by("birdID"=="actor") ) %>% 
+  mutate(groupID = coalesce(groupID.x, groupID.y),
+         sex = coalesce(sex, actor.sex)) %>% 
+  select(birdID, rank, power, groupID, sex, total_events) %>% 
+  mutate(total_events = if_else(is.na(total_events), 0, total_events))
+
+#Boxplot by group and sex showing total aggression per bird
+sex_boxplot_group <- ggboxplot(agg_by_actor_group, x = "groupID", y = "total_events", color = "sex", add = "jitter") +
+  scale_color_manual(values = colrs) + 
+  theme_minimal() +
+  labs(y = "Number of aggression", color = "Actor sex", x ="") +
+  theme(legend.position = "bottom",
+    axis.text.x = element_text(size = 12))+
+  scale_x_discrete(position = "top",
+                   labels = c("G1","G2", "G3", "G4", "G5" ))+
+  theme(legend.position = c(0.85, 0.8),
+        legend.box.background = element_rect(color = "black", fill = "white", linewidth = 0.2),
+        legend.key.size = unit(0.5, 'cm'))
+
+ggsave(file.path(figure_output_folder, "sex_boxplot_group.jpeg"), 
+       sex_boxplot_group, 
+       device = "jpeg", 
+       width = 15, height = 10, units = "cm")
+ 
+```
+
+Plot - all together
+```{r individual plot all together,fig.width=5, fig.height=5}
+#Boxplot all groups combined, by sex, total aggression per bird
+sex_boxplot_all <- ggboxplot(agg_by_actor_group, x = "sex", y = "total_events", color = "sex", add = "jitter") +
+  scale_color_manual(values = colrs) + 
+  theme_minimal() +
+  theme(legend.position = "none",
+    axis.text.x = element_text(size = 14)) +
+  labs(y = "Number of aggression", x ="") 
+  
+
+ggsave(file.path(figure_output_folder, "sex_boxplot_all.jpeg"), 
+       sex_boxplot_all, 
+       device = "jpeg", 
+       width = 10, height = 10, units = "cm")
+
+```
+
+Get proportions within group
+```{r get the propotion within group}
+### add group proportion
+agg_by_actor_group <- agg_by_actor_group %>% 
+  group_by(groupID) %>% 
+  mutate(prop_agg = total_events/sum(total_events))
+
+```
+
+Plot 5 group within-group proportion
+
+```{r individual plot with propotions,fig.width=5, fig.height=5}
+#Boxplot all groups combined, by sex, total aggression per bird
+sex_boxplot_all_prop <- ggboxplot(agg_by_actor_group, x = "sex", y = "prop_agg", color = "sex", add = "jitter") +
+  scale_color_manual(values = colrs) + 
+  theme_minimal() +
+  theme(legend.position = "none",
+    axis.text.x = element_text(size = 14)) +
+  labs(y = "Proportion of aggression", x = "")# +
+  #geom_signif(data=agg_by_actor_group,comparisons=list(c("Female","Male")),map_signif_level = TRUE,annotations="p = 0.0547", textsize = 3)
+
+ggsave(file.path(figure_output_folder, "sex_boxplot_all_prop.jpeg"), 
+       sex_boxplot_all_prop, 
+       device = "jpeg", 
+       width = 10, height = 10, units = "cm")
+
+```
+
+Combine three individual level plots
+
+```{r individual plot with proportions all together,fig.width=10, fig.height=5}
+
+sex_boxplot_combined_complete <- sex_boxplot_group + sex_boxplot_all + sex_boxplot_all_prop +
+    plot_layout(ncol =3, widths = c(2, 1,1)) +
+  plot_annotation(tag_levels = 'A') &
+    theme(plot.tag = element_text(face = 'bold'))
+
+
+ggsave(file.path(figure_output_folder, "sex_boxplot_combined_complete.jpeg"), 
+       sex_boxplot_combined_complete, 
+       device = "jpeg", 
+       width = 25, height = 10, units = "cm")
+```
+
+## Analysis 
+
+5 groups separate T test
+```{r individual T test}
+split_agg <- split(agg_by_actor_group, agg_by_actor_group$groupID)
+
+models_sep <- map(split_agg, ~ t.test(total_events ~ sex, data = .x))
+
+ttest_individual_sep <- map_df(models_sep, tidy, .id = "groupID")
+
+ttest_individual_sep  <- ttest_individual_sep %>%
+  mutate(across(where(is.numeric), ~ signif(.x, 2)),
+         groupID = c("G1", "G2", "G3", "G4", "G5")) %>% 
+  select(-method, -alternative)
+
+set_flextable_defaults(
+  font.size = 10, theme_fun = theme_vanilla,
+  padding = 6)
+
+flextable(ttest_individual_sep) %>% 
+  save_as_docx( path = paste0(table_output_folder,"/ttest_individual_sep.docx"))
+
+write_csv(ttest_individual_sep, file = file.path(table_output_folder, "ttest_individual_sep.csv"))
+
+```
+
+5 groups all together GLMM
+
+```{r individual all together GLM}
+#with count data, negative binomial 
+
+individual_model_all_nb1 <- glmmTMB(total_events ~ sex + (1 | groupID), 
+                     family = nbinom1, data = agg_by_actor_group)
+
+individual_model_all_nb2 <- glmmTMB(total_events ~ sex + (1 | groupID), 
+                     family = nbinom2, data = agg_by_actor_group)
+
+AIC(individual_model_all_nb1 , individual_model_all_nb2 )
+
+#individual_model_all_nb2 is a better fit
+
+summary(individual_model_all_nb2)
+r2(individual_model_all_nb2)
+
+individual_model_all_nb2_summary <- summary(individual_model_all_nb2)
+
+individual_model_all_nb2_summary <- capture.output(summary(individual_model_all_nb2))
+writeLines(individual_model_all_nb2_summary, file.path(table_output_folder, "individual_model_all_nb2_summary.txt"))
+
+model1.emm <- emmeans(individual_model_all_nb2, specs="sex", weights="proportional")
+pairs(model1.emm) 
+
+#with proportion data, beta regression 
+
+individual_model_all_beta_complete <- glmmTMB(
+  prop_agg ~ sex ,#+ (1 | groupID),         
+  zi = ~ 1,                              
+  family = beta_family(),                 
+  data = agg_by_actor_group
+)
+
+summary(individual_model_all_beta_complete)
+r2(individual_model_all_beta_complete)
+
+```
+
+#2.Dyad Level
+
+## Permutation 
+
+```{r create dyad color}
+
+colrs3 <- c(
+            "same sex"="chocolate", 
+            "opposite sex"="dimgray")
+
+```
+
+##2 dyad types
+
+2 dyad type permutation test 
+```{r permutation 2 dyad types}
+
+set.seed(123)
+
+sex.list <- c("Female", "Female","Female","Female","Female",
+              "Male", "Male","Male","Male","Male")
+
+sex.list <- as.data.frame(sex.list)
+
+dyad_perm <- function(df, group_name){
+
+  observed <- df %>%
+    group_by(dyad.sex3) %>%
+    summarise(mean_events = mean(nevents), .groups = "drop")
+
+t <- 5000
+perm_results <- matrix(0, nrow = t, ncol = 2)
+colnames(perm_results) <- c("same sex",  "opposite sex")
+
+for (i in 1:t) {
+    rows <- sample(nrow(sex.list))
+    sex.list.group <- sex.list[rows, ]
+    
+    bird.list.group <- bird.list %>% 
+      filter(combogroupID == unique(df$groupID)) %>% 
+      mutate(perm_sex =  sex.list.group)
+
+    perm_data <- df %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("actor" = "Color")) %>%
+      rename(actor_perm_sex = perm_sex) %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("subject" = "Color")) %>%
+      rename(subject_perm_sex = perm_sex)
+
+    perm_data <- perm_data %>%
+    mutate(perm_dyad = ifelse(
+      actor_perm_sex == subject_perm_sex, "same sex", "opposite sex"
+    ))
+
+    perm_summary <- perm_data %>%
+      group_by(perm_dyad) %>%
+      summarise(mean_events = mean(nevents), .groups = "drop")
+
+   same_sex <- perm_summary$mean_events[perm_summary$perm_dyad == "same sex"]
+  opposite_sex <- perm_summary$mean_events[perm_summary$perm_dyad == "opposite sex"]
+
+  perm_results[i, "same sex"] <- ifelse(length(same_sex) == 0, 0, same_sex)
+  perm_results[i, "opposite sex"] <- ifelse(length(opposite_sex) == 0, 0, opposite_sex)
+  }
+
+par(mfrow=c(1,2))
+  
+obs_opp <- observed$mean_events[observed$dyad.sex3 == "opposite sex"]
+hist(perm_results[, "opposite sex"], main = "Opposite sex", xlab = "Aggression events")
+abline(v = obs_opp, lty = 2, col = "red", lwd = 3)
+p_low_opp <- (length(which(perm_results[, "opposite sex"] < obs_opp)) + 1) / (t + 1)
+p_low_opp
+p_high_opp <- (length(which(perm_results[, "opposite sex"] > obs_opp)) + 1) / (t + 1)
+p_high_opp
+
+
+obs_same <- observed$mean_events[observed$dyad.sex3 == "same sex"]
+hist(perm_results[, "same sex"], main = "Same sex", xlab = "Aggression events")
+abline(v = obs_same, lty = 2, col = "red", lwd = 3)
+p_low_same  <- (length(which(perm_results[, "same sex"] < obs_same)) + 1) / (t + 1)
+p_low_same 
+p_high_same <- (length(which(perm_results[, "same sex"] > obs_same)) + 1) / (t + 1)
+p_high_same
+
+return(c(p_low_opp = p_low_opp, p_high_opp = p_high_opp, p_low_same = p_low_same, p_high_same = p_high_same ))
+}
+
+
+for (group_name in names(split_dfs_Wrank)) {
+jpeg(file.path(figure_output_folder, paste0("perm_dyad_plot_", group_name, ".jpeg")),
+     width = 5, height = 5, units = "in", res = 300)
+  
+this_df <- split_dfs_Wrank[[group_name]]
+ 
+pvals <- dyad_perm(this_df, group_name)
+  
+dev.off()
+  
+cat("\nGroup:", group_name, "\n")
+  print(pvals)
+}
+```
+
+### Plot permutation results 2 dyads of five groups
+
+
+```{r plot permutation 2 dyads}
+
+set.seed(123)
+
+perm2_dev_df <- data.frame()
+
+sex.list <- c("Female", "Female","Female","Female","Female",
+              "Male", "Male","Male","Male","Male")
+
+sex.list <- as.data.frame(sex.list)
+
+
+for (i in seq_along(split_dfs_Wrank)) {
+
+  this_df <- split_dfs_Wrank[[i]]
+  group_name <- unique(this_df$groupID)
+  
+  observed <- this_df %>%
+    group_by(dyad.sex3) %>%
+    summarise(mean_events = mean(nevents), .groups = "drop")
+  
+  obs_same <- observed$mean_events[observed$dyad.sex3 == "same sex"]
+  obs_opp  <- observed$mean_events[observed$dyad.sex3 == "opposite sex"]
+  
+  t <- 5000
+  perm_results <- matrix(0, nrow = t, ncol = 2)
+  colnames(perm_results) <- c("same sex", "opposite sex")
+  
+  for (i in 1:t) {
+     rows <- sample(nrow(sex.list))
+    sex.list.group <- sex.list[rows, ]
+    
+    bird.list.group <- bird.list %>% 
+      filter(combogroupID == unique(this_df$groupID)) %>% 
+      mutate(perm_sex =  sex.list.group)
+    
+    perm_data <- this_df %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("actor" = "Color")) %>%
+      rename(actor_perm_sex = perm_sex) %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("subject" = "Color")) %>%
+      rename(subject_perm_sex = perm_sex) %>%
+      mutate(perm_dyad = ifelse(actor_perm_sex == subject_perm_sex,
+                                "same sex", "opposite sex"))
+    
+    perm_summary <- perm_data %>%
+      group_by(perm_dyad) %>%
+      summarise(mean_events = mean(nevents), .groups = "drop")
+    
+    perm_results[i, "same sex"] <- ifelse("same sex" %in% perm_summary$perm_dyad,
+                                          perm_summary$mean_events[perm_summary$perm_dyad=="same sex"], NA)
+    perm_results[i, "opposite sex"] <- ifelse("opposite sex" %in% perm_summary$perm_dyad,
+                                              perm_summary$mean_events[perm_summary$perm_dyad=="opposite sex"], NA)
+  }
+  
+
+  perm2_dev_df <- rbind(perm2_dev_df,
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "same sex",
+                         deviation = obs_same - perm_results[, "same sex"]
+                       ),
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "opposite sex",
+                         deviation = obs_opp - perm_results[, "opposite sex"] 
+                       ))
+}
+
+
+dyad2_same_sex_violin <- ggplot(perm2_dev_df %>% filter(dyad_type=="same sex"),
+       aes(x = factor(group), y = deviation)) +
+  geom_violin(fill = "chocolate", alpha = 0.5, width = 1) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+    theme_minimal()+
+  labs(x = "", y = "Observed mean - permutation mean") +
+  theme(
+    axis.title.y = element_text(size = 13),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13))+
+  scale_x_discrete(position = "top",
+                   labels = c("G1","G2", "G3", "G4", "G5" ))
+
+ggsave(file.path(figure_output_folder, "dyad2_same_sex_violin.jpeg"), 
+       dyad2_same_sex_violin, 
+       device = "jpeg", 
+       width = 10, height = 10, units = "cm")
+
+
+dyad2_opp_sex_violin <- ggplot(perm2_dev_df %>% filter(dyad_type=="opposite sex"),
+       aes(x = factor(group), y = deviation)) +
+  geom_violin(fill = "dimgray", alpha = 0.5, width = 1) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+  labs(x = "", y = "Observed mean - permutation mean") +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 13),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13))+
+  scale_x_discrete(position = "top",
+                   labels = c("G1","G2", "G3", "G4", "G5" ))
+
+ggsave(file.path(figure_output_folder, "dyad2_opp_sex_violin.jpeg"), 
+       dyad2_opp_sex_violin, 
+       device = "jpeg", 
+       width = 10, height = 10, units = "cm")
+
+dyad2_violin <- plot_grid(dyad2_opp_sex_violin, dyad2_same_sex_violin)
+
+
+facet_labels <- data.frame(
+  dyad_type = c("opposite sex", "same sex"),
+  label = c("A", "B")
+)
+
+dyad2_violin <- ggplot(perm2_dev_df,
+                       aes(x = factor(group), y = deviation, fill = factor(dyad_type))) +
+  geom_violin(alpha = 0.5, width = 1) +  
+  facet_wrap(~dyad_type, nrow = 1, ncol = 2) +
+  scale_fill_manual(values = colrs3) + 
+  geom_text(
+    data = facet_labels, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
+    fontface = "bold", size = 6, hjust = 0, vjust = 1) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+  labs(x = "", y = "Observed mean - permutation mean", fill = "Dyad type") +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 13),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 13),
+    plot.margin = margin(10, 50, 10, 50))+
+  scale_x_discrete(
+                   labels = c("G1","G2", "G3", "G4", "G5" )) +
+    theme(strip.text = element_text(size = 16, face = "bold")) 
+
+
+
+ggsave(file.path(figure_output_folder, "dyad2_violin.jpeg"), 
+       dyad2_violin, 
+       device = "jpeg", 
+       width = 20, height =10, units = "cm")
+
+```
+
+
+## 4 dyad types
+
+```{r permutation 4 dyads, fig.width=5, fig.height=5}
+
+set.seed(123)
+dyad_perm <- function(df, group_name){
+
+  observed <- df %>%
+    group_by(dyad.sex1) %>%
+    summarise(mean_events = mean(nevents), .groups = "drop")
+
+  t <- 5000
+  perm_results <- matrix(0, nrow = t, ncol = 4)
+  colnames(perm_results) <- c("FF", "FM", "MF", "MM")
+
+  for (i in 1:t) {
+   rows <- sample(nrow(sex.list))
+    sex.list.group <- sex.list[rows, ]
+    
+    bird.list.group <- bird.list %>% 
+      filter(combogroupID == unique(this_df$groupID)) %>% 
+      mutate(perm_sex =  sex.list.group)
+    
+    perm_data <- this_df %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("actor" = "Color")) %>%
+      rename(actor_perm_sex = perm_sex) %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("subject" = "Color")) %>%
+      rename(subject_perm_sex = perm_sex) %>%
+      mutate(perm_dyad = paste(actor_perm_sex, subject_perm_sex, sep = "-"))
+
+    perm_summary <- perm_data %>%
+      group_by(perm_dyad) %>%
+      summarise(mean_events = mean(nevents), .groups = "drop")
+
+  FF <- perm_summary$mean_events[perm_summary$perm_dyad == "Female-Female"]
+  FM <- perm_summary$mean_events[perm_summary$perm_dyad == "Female-Male"]
+  MF <- perm_summary$mean_events[perm_summary$perm_dyad == "Male-Female"]
+  MM <- perm_summary$mean_events[perm_summary$perm_dyad == "Male-Male"]
+
+  perm_results[i, "FF"] <- ifelse(length(FF) == 0, 0, FF)
+  perm_results[i, "FM"] <- ifelse(length(FM) == 0, 0, FM)
+  perm_results[i, "MF"] <- ifelse(length(MF) == 0, 0, MF)
+  perm_results[i, "MM"] <- ifelse(length(MM) == 0, 0, MM)
+  }
+
+par(mfrow=c(2,2))
+
+obs_MM <- observed$mean_events[observed$dyad.sex1 == "male-male"]
+hist(perm_results[, "MM"], main = "MM dyad", xlab = "Aggression events")
+abline(v = obs_MM, lty=2, col="red", lwd=3)
+p_low_MM <- (length(which(perm_results[, "MM"] < obs_MM)) + 1) / (t + 1)
+p_low_MM
+p_high_MM <- (length(which(perm_results[, "MM"] > obs_MM)) + 1) / (t + 1)
+p_high_MM
+
+
+obs_FF <- observed$mean_events[observed$dyad.sex1 == "female-female"]
+hist(perm_results[, "FF"], main = "FF dyad", xlab = "Aggression events")
+abline(v = obs_FF, lty=2, col="red", lwd=3)
+p_low_FF <- (length(which(perm_results[, "FF"] < obs_FF)) + 1) / (t + 1)
+p_low_FF
+p_high_FF <- (length(which(perm_results[, "FF"] > obs_FF)) + 1) / (t + 1)
+p_high_FF
+
+obs_FM <- observed$mean_events[observed$dyad.sex1 == "female-male"]
+hist(perm_results[, "FM"], main = "FM dyad", xlab = "Aggression events")
+abline(v = obs_FM, lty=2, col="red", lwd=3)
+p_low_FM <- (length(which(perm_results[, "FM"] < obs_FM)) + 1) / (t + 1)
+p_low_FM
+p_high_FM <- (length(which(perm_results[, "FM"] > obs_FM)) + 1) / (t + 1)
+p_high_FM
+
+
+obs_MF <- observed$mean_events[observed$dyad.sex1 == "male-female"]
+hist(perm_results[, "MF"], main = "MF dyad", xlab = "Aggression events")
+abline(v = obs_MF, lty=2, col="red", lwd=3)
+p_low_MF <- (length(which(perm_results[, "MF"] < obs_MF)) + 1) / (t + 1)
+p_low_MF
+p_high_MF <- (length(which(perm_results[, "MF"] > obs_MF)) + 1) / (t + 1)
+p_high_MF
+
+mtext(group_name, side = 3, line = -2, outer = TRUE)
+
+return(c(p_low_MM = p_low_MM, p_high_MM = p_high_MM, 
+         p_low_FF = p_low_FF, p_high_FF = p_high_FF,
+         p_low_FM = p_low_FM, p_high_FM = p_high_FM, 
+         p_low_MF = p_low_MF, p_high_MF = p_high_MF))
+}
+
+for (group_name in names(split_dfs_Wrank)) {
+jpeg(file.path(figure_output_folder, paste0("perm_dyad4_plot_", group_name, ".jpeg")),
+     width = 5, height = 5, units = "in", res = 300)
+  
+this_df <- split_dfs_Wrank[[group_name]]
+ 
+pvals <- dyad_perm(this_df, group_name)
+  
+dev.off()
+  
+cat("\nGroup:", group_name, "\n")
+  print(pvals)
+}
+
+```
+
+
+### Plot permutation results 4 dyads of five groups
+
+```{r plot permutation 4 dyads}
+
+perm4_dev_df <- data.frame()
+
+
+for (i in seq_along(split_dfs_Wrank)) {
+
+  this_df <- split_dfs_Wrank[[i]]
+  group_name <- unique(this_df$groupID)
+  
+  observed <- this_df %>%
+    group_by(dyad.sex1) %>%
+    summarise(mean_events = mean(nevents), .groups = "drop")
+  
+  obs_MM <- observed$mean_events[observed$dyad.sex1 == "male-male"]
+  obs_FF <- observed$mean_events[observed$dyad.sex1 == "female-female"]
+  obs_FM <- observed$mean_events[observed$dyad.sex1 == "female-male"]
+  obs_MF <- observed$mean_events[observed$dyad.sex1 == "male-female"]
+  
+  t <- 5000
+  perm_results <- matrix(0, nrow = t, ncol = 4)
+  colnames(perm_results) <- c("FF", "FM", "MF", "MM")
+
+  
+  for (i in 1:t) {
+    rows <- sample(nrow(sex.list))
+    sex.list.group <- sex.list[rows, ]
+    
+    bird.list.group <- bird.list %>% 
+      filter(combogroupID == unique(this_df$groupID)) %>% 
+      mutate(perm_sex =  sex.list.group)
+    
+    perm_data <- this_df %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("actor" = "Color")) %>%
+      rename(actor_perm_sex = perm_sex) %>%
+      left_join(bird.list.group %>% select(Color, perm_sex), by = c("subject" = "Color")) %>%
+      rename(subject_perm_sex = perm_sex) %>%
+      mutate(perm_dyad = paste(actor_perm_sex, subject_perm_sex, sep = "-"))
+    
+    perm_summary <- perm_data %>%
+      group_by(perm_dyad) %>%
+      summarise(mean_events = mean(nevents), .groups = "drop")
+
+  FF <- perm_summary$mean_events[perm_summary$perm_dyad == "Female-Female"]
+  FM <- perm_summary$mean_events[perm_summary$perm_dyad == "Female-Male"]
+  MF <- perm_summary$mean_events[perm_summary$perm_dyad == "Male-Female"]
+  MM <- perm_summary$mean_events[perm_summary$perm_dyad == "Male-Male"]
+
+  perm_results[i, "FF"] <- ifelse(length(FF) == 0, 0, FF)
+  perm_results[i, "FM"] <- ifelse(length(FM) == 0, 0, FM)
+  perm_results[i, "MF"] <- ifelse(length(MF) == 0, 0, MF)
+  perm_results[i, "MM"] <- ifelse(length(MM) == 0, 0, MM)
+  }
+  
+
+  perm4_dev_df <- rbind(perm4_dev_df,
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "FF",
+                         deviation =  obs_FF - perm_results[, "FF"]
+                       ),
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "FM",
+                         deviation = obs_FM - perm_results[, "FM"]
+                       ),
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "MM",
+                         deviation = obs_MM - perm_results[, "MM"] 
+                       ),
+                       data.frame(
+                         group = group_name,
+                         dyad_type = "MF",
+                         deviation = obs_MF - perm_results[, "MF"]
+                       ))
+}
+
+colrs2 <- c("FM"="#a6611a", 
+            "MF"="#dfc27d", 
+            "FF"="#80cdc1", 
+            "MM"="#018571")
+
+perm4_dev_df %>% 
+  group_by(group) %>% 
+  filter(dyad_type=="FF") %>% 
+  summarise(max = max(deviation),
+            min = min(deviation))
+
+facet_labels4 <- data.frame(
+  dyad_type = c("female-male", "male-female", "female-female", "male-male"),
+  label = c("A", "B", "C", "D")
+)
+
+perm4_dev_df <- perm4_dev_df %>% 
+  mutate(
+    dyad_type = case_when(
+      dyad_type == "FM" ~ "female-male",
+      dyad_type == "MF" ~ "male-female",
+      dyad_type == "FF" ~ "female-female",
+      dyad_type == "MM" ~ "male-male"
+    )
+  )
+
+colrs4 <- c("female-male"="#a6611a", 
+            "male-female"="#dfc27d", 
+            "female-female"="#80cdc1", 
+            "male-male"="#018571")
+  
+dyad4_violin <- ggplot(perm4_dev_df,
+                       aes(x = factor(group), y = deviation, fill = factor(dyad_type))) +
+  geom_violin(alpha = 0.5,  width = 1) +            
+  facet_wrap(~factor(dyad_type, c("female-male", "male-female", "female-female", "male-male")), nrow = 2, ncol = 2) +
+  scale_fill_manual(values = colrs4) + 
+  geom_text(
+    data = facet_labels4, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
+    fontface = "bold", size = 6, hjust = 0, vjust = 1) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+  labs(x = "", y = "Observed mean - permutation mean", fill = "Dyad type") +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 13),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 13),
+    plot.margin = margin(10, 50, 10, 50))+
+  scale_x_discrete(
+                   labels = c("G1","G2", "G3", "G4", "G5" )) +
+    theme(strip.text = element_text(size = 16, face = "bold")) 
+
+
+ggsave(file.path(figure_output_folder, "dyad4_violin.jpeg"), 
+       dyad4_violin, 
+       device = "jpeg", 
+       width = 20, height =10, units = "cm")
+
+```
+
+
+#3. Group level
+
+
+##Plot rank vs. sex - all five group together 
+```{r plot rank and sex,fig.width=10, fig.height=5}
+
+summary(rank_df_all$power)
+
+power_sex_model_boxplot_all <- 
+  ggboxplot(rank_df_all, x = "sex", y = "power", color = "sex", add = "jitter") +
+  scale_color_manual(values = colrs) + 
+  labs(y = "Power score", x = "") +
+  theme_minimal() +
+  theme(legend.position="none") +
+  theme(
+    axis.title.y = element_text(size = 15),
+    axis.text.x = element_text(size = 15)
+  )
+
+ggsave(file.path(figure_output_folder, "power_sex_model_boxplot_all.jpeg"), 
+       power_sex_model_boxplot_all, 
+       device = "jpeg", 
+       width = 10, height = 10, units = "cm")
+
+```
+
+
+##Analysis
+LM - 5 groups all together
+```{r group lm all together, fig.width=5}
+
+power_sex_model_all <- lmer(power ~ sex + (1 | groupID), data = rank_df_all)
+summary(power_sex_model_all)
+
+
+#groupID does not explain variance, and thus simplified model
+
+power_sex_model_all <- lm(power ~ sex, data = rank_df_all)
+summary(power_sex_model_all)
+
+r2(power_sex_model_all)
+
+performance::check_singularity(power_sex_model_all)
+
+power_sex_model_all_summary <- capture.output(summary(power_sex_model_all))
+writeLines(power_sex_model_all_summary, file.path(table_output_folder, "power_sex_model_all_summary.txt"))
+
+#check the model
+power_sex_model_all_diagnostics_plot <- check_model(power_sex_model_all)
+power_sex_model_all_diagnostics_plot
+
+# saving the plot
+jpeg(file = file.path(figure_output_folder, "power_sex_model_all_diagnostics.jpeg"), 
+     width = 18, height = 25, units = "cm", res = 300)
+
+print(power_sex_model_all_diagnostics_plot)
+
+dev.off()
+
+```
+LM - 5 groups separately
+```{r group separate model }
+
+power_sex_lm <- function(df) {
+  
+df1 <- df %>%
+  select(birdID = actor, rank = actor.rank, power = actor.power)
+
+df2 <- df %>%
+  select(birdID = subject, rank = subject.rank, power = subject.power)
+
+rank_df <- bind_rows(df1, df2) %>%
+  distinct(birdID, rank, power) %>% 
+  left_join(bird.list %>% select(Color, Sex), by = c("birdID" = "Color")) 
+
+power_sex_model <- lm(power ~ Sex, data = rank_df)
+return(power_sex_model) 
+}
+
+model_summaries <- list()
+
+for (group_name in names(split_dfs_Wrank)) {
+  this_df <- split_dfs_Wrank[[group_name]]
+  model <- power_sex_lm(this_df)
+  model_summaries[[group_name]] <- tbl_regression(model,pvalue_fun = ~ style_pvalue(.x, digits = 2)) %>% 
+      bold_labels() %>%
+  italicize_levels() %>%
+  remove_row_type(variables = everything(), type = "reference", level_value = NULL) %>% 
+    modify_table_body(~ .x %>%
+                      mutate(
+                        label = case_when(
+                          label == "Male" ~ "Male (vs. female)",
+                          TRUE ~ label))) 
+    
+}
+
+
+combined_df <- imap_dfr(
+  model_summaries,
+  function(tbl, group_name) {
+
+    tbl$table_body %>%
+      filter(label == "Male (vs. female)") %>%   # keep only effect row
+      mutate(Group = group_name, .before = 1)
+  }
+)
+
+combined_df <- combined_df %>%
+  mutate(
+    Group = paste0("G", match(Group, names(model_summaries)))
+  ) 
+
+combined_df <- combined_df %>%
+  select(Group, estimate, conf.low, conf.high, p.value) %>% 
+  mutate(across(where(is.numeric), ~ signif(.x, 2)))
+
+
+flextable(combined_df) %>% 
+  save_as_docx( path = paste0(table_output_folder,"/power_sex_model_group_summary.docx"))
+
+```
+
+
+## Plots of continous aggression events and ordinal social rankings
+
+
+```{r plot hierarchy}
+names(split_dfs_Wrank) <- c("G1","G2","G3", "G4", "G5")
+        
+plot_group_hierarchy <- function(df, group_name) {
+  
+ntotal <-  df %>% summarise(ntotal = sum(nevents))
+
+el <- df%>% 
+  group_by(actor, subject, actor.sex, subject.sex, power.diff, rank.diff, dyad.sex3) %>% 
+  mutate(prop.agg=nevents/ntotal$ntotal) %>%  #number and proportion of aggression events by dyad type 3 (opposite/same sex)
+  select(actor, subject, actor.sex, subject.sex, power.diff, rank.diff, dyad.sex3, nevents, prop.agg)
+
+df1 <- df %>%
+  select(birdID = actor, rank = actor.rank, power = actor.power)
+
+df2 <- df %>%
+  select(birdID = subject, rank = subject.rank, power = subject.power)
+
+rank_df <- bind_rows(df1, df2) %>%
+  distinct(birdID, rank, power)
+
+atts <- inner_join(el, rank_df, join_by("actor" == "birdID")) 
+
+atnet <- graph_from_data_frame(
+  el,
+  directed = TRUE
+)
+
+
+V(atnet)$power <- atts$power[match(V(atnet)$name, atts$actor)]
+V(atnet)$rank <- atts$rank[match(V(atnet)$name, atts$actor)]
+V(atnet)$sex <- atts$actor.sex[match(V(atnet)$name, atts$actor)]
+
+# Add conditional color, based on direction of aggression
+E(atnet)[dyad.sex3=="same sex"]$dcolor <- adjustcolor("chocolate", alpha = 0.4)
+E(atnet)[dyad.sex3=="opposite sex"]$dcolor <- adjustcolor("dimgray", alpha = 0.4)
+E(atnet)$edge.curved <- ifelse(E(atnet)$dyad.sex3 == "same sex",
+                               0.2,   # curve above
+                              -0.2)   # curve below
+
+# Set custom attribute-ordered network layout
+y <- V(atnet)$power
+x <- 1
+birdID <- V(atnet)$name
+attord<- cbind.data.frame(birdID, x, y) #attribute-ordered layout of nodes
+
+# Add node color pattern by sex
+colrs <- c("#F8766D", "#00BFC4")
+names(colrs) <- c("Female", "Male")
+V(atnet)$color <- colrs[V(atnet)$sex]
+
+#Add text box
+pad_x <- 0.03
+pad_y <- 0.005
+
+par(mar = c(1.5,6,2,0))   # tighten margins
+
+plot(NULL, 
+     xlim=c(1,1), ylim=c(0,2), 
+     ylab="Power score", xlab="",
+     cex.axis=0.2,
+     cex.lab=2,
+     axes = FALSE,
+     xaxt = "n")
+#box()
+axis(1, at = 1, cex.axis=1, label = FALSE)
+axis(2, at = seq(0,2, 0.25),las=1,  cex.axis=1)
+abline(v = 1, lwd=1.5, col = "black")
+
+# Set node size, label size, tie width
+nodesize<-4 #set node size
+edge.multiplier <- 100
+edge.minimum <- 0.25
+tiewidth <- (E(atnet)$prop.agg*edge.multiplier)+edge.minimum #set edge width
+labelsize<-0.5 #set node label size
+
+#plot network
+plot.igraph(atnet,
+add=TRUE,
+rescale=FALSE, asp = 0,
+layout=attord[,2:3],#sets as attribute-ordered layout, defined above
+vertex.size=nodesize, #this references the node circle size, set above
+vertex.label = "", #sets node label colors (ids) to black
+vertex.color=V(atnet)$color, #sets node fill color by sex
+edge.width=tiewidth, #this references the edge width, set above
+edge.arrow.size=0.01, #this makes the arrows on the ends of the edges very small
+edge.curved=E(atnet)$edge.curved,   
+edge.loop.angle=0,
+edge.color= E(atnet)$dcolor, #this sets the edge color, based on the colors set above
+axes=TRUE,
+xlim=c(1,1),
+ylim=c(-0.25,2.5)
+)
+text(x=1.05, y=0, label=paste0("N: ", ntotal$ntotal), adj = c(0,0), font = 3, cex=2, pch = 100)
+title(main = group_name, cex.main = 3)
+
+}
+
+
+
+jpeg(file.path(figure_output_folder, "hierarchy_all_groups.jpeg"),
+     width=25, height=15, units="cm", res=300)
+
+ncol <- 3
+nrow <- 2
+
+par(mfrow = c(nrow, ncol),
+  mar = c(0, 0, 0, 0),
+  oma = c(0, 0, 0, 0)
+)
+
+for (group_name in names(split_dfs_Wrank)) {
+  this_df <- split_dfs_Wrank[[group_name]]
+  plot_group_hierarchy(this_df, group_name)
+}
+
+plot.new()   
+
+legend("topleft", legend = c("Female", "Male"), pch = 21, pt.bg = c("#F8766D", "#00BFC4"), title = "Sex", bty = "n",cex = 2)
+
+legend("bottomleft", legend = c("same sex", "opposite sex"), col = c("chocolate", "dimgray"),lwd = 2, title = "Dyad types", bty = "n", cex = 2)
+
+dev.off()
+
+
+
+```
