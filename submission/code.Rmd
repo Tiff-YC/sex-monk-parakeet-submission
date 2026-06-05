@@ -75,12 +75,11 @@ bird.list <-  read_csv(paste0(data_location,"/bird_submission.csv"))
 
 ```
 
-# Separate different groups
+# Separate to different groups
 ```{r separate into groups}
 split_dfs <- split(all.aggWsex, all.aggWsex$groupID)
 
 names(split_dfs)  
-
 ```
 
 #Calculate rank
@@ -216,6 +215,7 @@ spring_rank_network <- function(N, beta, alpha, K, l0 = 0.5, l1 = 1.0) {
 }
 ```
 
+
 ## Calculate springrank power, ordinal rank, rule breaking etc for each group
 
 ```{r calculate rank}
@@ -274,13 +274,16 @@ G4 <- compute_springrank(split_dfs[["G4"]])
 
 G5 <- compute_springrank(split_dfs[["G5"]])
 
-
-
 ```
 
 # Data cleaning
 
-rank_df_all - 50 rows of birds with power and sex
+datasets that we are using:
+
+rank_df_all : 50 rows of birds with power and sex
+
+combined_df_Wrank_sexb : 248 rows of dyadic interactions with power and sex
+
 ```{r data cleaning}
 combined_df_Wrank_sexb <- bind_rows(
   "G1" = G1,
@@ -304,6 +307,7 @@ df2_all <- combined_df_Wrank_sexb %>%
 
 rank_df_all <- bind_rows(df1_all, df2_all) %>%
   distinct(birdID, .keep_all = TRUE)
+  
 
 ```
 
@@ -313,6 +317,9 @@ rank_df_all <- bind_rows(df1_all, df2_all) %>%
 ##Plotting
 
 Plot - 5 groups
+
+agg_by_actor_group : 50 rows of birds with total aggression events, sex, and power
+
 ```{r individual plot, fig.width = 10, fig.height = 5}
 colrs <- c("Female" = "#F8766D", "Male" = "#00BFC4")
 
@@ -332,15 +339,29 @@ agg_by_actor_group  <- rank_df_all %>%
 #Boxplot by group and sex showing total aggression per bird
 sex_boxplot_group <- ggboxplot(agg_by_actor_group, x = "groupID", y = "total_events", color = "sex", add = "jitter") +
   scale_color_manual(values = colrs) + 
-  theme_minimal() +
-  labs(y = "Number of aggression", color = "Actor sex", x ="") +
-  theme(legend.position = "bottom",
-    axis.text.x = element_text(size = 12))+
+  #theme_minimal() +
+  labs(y = "Number of aggression", color = "Actor sex", x ="Group") +
   scale_x_discrete(position = "top",
                    labels = c("G1","G2", "G3", "G4", "G5" ))+
-  theme(legend.position = c(0.85, 0.8),
+    theme(legend.position = "bottom",
+        axis.title.y = element_text(size = 14),
+        axis.text.y = element_text(size = 13),
+        axis.title.x = element_text(size = 14),
+        axis.title.x.top = element_text(size = 14,margin = margin(b = 12)),
+        axis.text.x = element_text(size = 14),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))+
+  theme(legend.position = c(0.85, 0.7),
         legend.box.background = element_rect(color = "black", fill = "white", linewidth = 0.2),
-        legend.key.size = unit(0.5, 'cm'))
+        legend.key.size = unit(0.5, 'cm'))+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.line.x.top = element_line(color = "black"),
+  axis.ticks = element_line(color = "black"),
+  axis.line = element_blank()
+)
+
+sex_boxplot_group
 
 ggsave(file.path(figure_output_folder, "sex_boxplot_group.jpeg"), 
        sex_boxplot_group, 
@@ -349,16 +370,31 @@ ggsave(file.path(figure_output_folder, "sex_boxplot_group.jpeg"),
  
 ```
 
+
 Plot - all together
+
 ```{r individual plot all together,fig.width=5, fig.height=5}
 #Boxplot all groups combined, by sex, total aggression per bird
 sex_boxplot_all <- ggboxplot(agg_by_actor_group, x = "sex", y = "total_events", color = "sex", add = "jitter") +
   scale_color_manual(values = colrs) + 
   theme_minimal() +
-  theme(legend.position = "none",
-    axis.text.x = element_text(size = 14)) +
-  labs(y = "Number of aggression", x ="") 
-  
+ theme(legend.position = "none",
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 13))+
+  labs(y = "Number of aggression", x ="") +
+   theme(
+    panel.grid.major = element_blank() ,
+    panel.grid.minor = element_blank()
+  )+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.line.x.bottom = element_line(color = "black"),
+  axis.ticks = element_line(color = "black"),
+  axis.line = element_blank()
+)
+
+sex_boxplot_all
 
 ggsave(file.path(figure_output_folder, "sex_boxplot_all.jpeg"), 
        sex_boxplot_all, 
@@ -367,7 +403,11 @@ ggsave(file.path(figure_output_folder, "sex_boxplot_all.jpeg"),
 
 ```
 
+
 Get proportions within group
+
+agg_by_actor_group : 50 rows of birds with total aggression events, proportions of aggression, sex, and power
+
 ```{r get the propotion within group}
 ### add group proportion
 agg_by_actor_group <- agg_by_actor_group %>% 
@@ -375,6 +415,7 @@ agg_by_actor_group <- agg_by_actor_group %>%
   mutate(prop_agg = total_events/sum(total_events))
 
 ```
+
 
 Plot 5 group within-group proportion
 
@@ -384,9 +425,22 @@ sex_boxplot_all_prop <- ggboxplot(agg_by_actor_group, x = "sex", y = "prop_agg",
   scale_color_manual(values = colrs) + 
   theme_minimal() +
   theme(legend.position = "none",
-    axis.text.x = element_text(size = 14)) +
-  labs(y = "Proportion of aggression", x = "")# +
-  #geom_signif(data=agg_by_actor_group,comparisons=list(c("Female","Male")),map_signif_level = TRUE,annotations="p = 0.0547", textsize = 3)
+    axis.text.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 13))+
+  labs(y = "Proportion of aggression", x = "") +
+   theme(
+    panel.grid.major = element_blank() ,
+    panel.grid.minor = element_blank()
+  )+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.line.x.bottom = element_line(color = "black"),
+  axis.ticks = element_line(color = "black"),
+  axis.line = element_blank()
+)
+  
+sex_boxplot_all_prop
 
 ggsave(file.path(figure_output_folder, "sex_boxplot_all_prop.jpeg"), 
        sex_boxplot_all_prop, 
@@ -395,21 +449,24 @@ ggsave(file.path(figure_output_folder, "sex_boxplot_all_prop.jpeg"),
 
 ```
 
+
 Combine three individual level plots
 
 ```{r individual plot with proportions all together,fig.width=10, fig.height=5}
 
-sex_boxplot_combined_complete <- sex_boxplot_group + sex_boxplot_all + sex_boxplot_all_prop +
-    plot_layout(ncol =3, widths = c(2, 1,1)) +
-  plot_annotation(tag_levels = 'A') &
-    theme(plot.tag = element_text(face = 'bold'))
+sex_boxplot_combined_complete <- sex_boxplot_group /
+  (sex_boxplot_all | sex_boxplot_all_prop) +
+  plot_annotation(tag_levels = "A") &
+  theme(plot.tag = element_text(face = "bold", size = 16))
 
+sex_boxplot_combined_complete
 
-ggsave(file.path(figure_output_folder, "sex_boxplot_combined_complete.jpeg"), 
+ggsave(file.path(figure_output_folder, "sex_boxplot_combined_complete.tiff"), 
        sex_boxplot_combined_complete, 
-       device = "jpeg", 
-       width = 25, height = 10, units = "cm")
+       device = "tiff", 
+       width = 18, height = 16, units = "cm")
 ```
+
 
 ## Analysis 
 
@@ -417,29 +474,50 @@ ggsave(file.path(figure_output_folder, "sex_boxplot_combined_complete.jpeg"),
 ```{r individual T test}
 split_agg <- split(agg_by_actor_group, agg_by_actor_group$groupID)
 
-models_sep <- map(split_agg, ~ t.test(total_events ~ sex, data = .x))
+# check before fitting
+normality_test <- map(split_agg, ~ shapiro.test(.x$total_events))
 
-ttest_individual_sep <- map_df(models_sep, tidy, .id = "groupID")
+variance_test <- map(split_agg, ~ leveneTest(total_events ~ sex, data = .x))
 
-ttest_individual_sep  <- ttest_individual_sep %>%
+normality_test_table <- map_df(normality_test, tidy, .id = "groupID")
+
+normality_test_table <- normality_test_table %>%
   mutate(across(where(is.numeric), ~ signif(.x, 2)),
-         groupID = c("G1", "G2", "G3", "G4", "G5")) %>% 
-  select(-method, -alternative)
+         groupID = c("G1", "G2", "G3", "G4", "G5")) %>% select(-method)
+
+# save the check 
+normality_test_table
 
 set_flextable_defaults(
   font.size = 10, theme_fun = theme_vanilla,
   padding = 6)
 
-flextable(ttest_individual_sep) %>% 
-  save_as_docx( path = paste0(table_output_folder,"/ttest_individual_sep.docx"))
+flextable(normality_test_table) %>% 
+  save_as_docx( path = paste0(table_output_folder,"/normality_test_table.docx"))
 
-write_csv(ttest_individual_sep, file = file.path(table_output_folder, "ttest_individual_sep.csv"))
+# fit the model
+models_sep <- map(split_agg, ~ wilcox.test(total_events ~ sex, data = .x))
+
+wtest_individual_sep <- map_df(models_sep, tidy, .id = "groupID")
+
+wtest_individual_sep  <- wtest_individual_sep %>%
+  mutate(across(where(is.numeric), ~ signif(.x, 2)),
+         groupID = c("G1", "G2", "G3", "G4", "G5")) %>% select(-method, -alternative)
+
+wtest_individual_sep
+
+# save the model result
+flextable(wtest_individual_sep) %>% 
+  save_as_docx( path = paste0(table_output_folder,"/wtest_individual_sep.docx"))
+
+write_csv(wtest_individual_sep, file = file.path(table_output_folder, "wtest_individual_sep.csv"))
 
 ```
 
 5 groups all together GLMM
 
 ```{r individual all together GLM}
+
 #with count data, negative binomial 
 
 individual_model_all_nb1 <- glmmTMB(total_events ~ sex + (1 | groupID), 
@@ -448,20 +526,86 @@ individual_model_all_nb1 <- glmmTMB(total_events ~ sex + (1 | groupID),
 individual_model_all_nb2 <- glmmTMB(total_events ~ sex + (1 | groupID), 
                      family = nbinom2, data = agg_by_actor_group)
 
-AIC(individual_model_all_nb1 , individual_model_all_nb2 )
+AIC(individual_model_all_nb1 , individual_model_all_nb2 ) # not a big differences
 
-#individual_model_all_nb2 is a better fit
+aic_table <- as.data.frame(AIC(individual_model_all_nb1, individual_model_all_nb2))
+flextable(aic_table) %>% 
+   save_as_docx( path = paste0(table_output_folder,"/AIC_individual_model_comparison.docx"))
 
+#individual_model_all_nb2 is slightly a better fit
+
+summary(individual_model_all_nb1)
 summary(individual_model_all_nb2)
+
+r2(individual_model_all_nb1)
 r2(individual_model_all_nb2)
 
+individual_model_all_nb1_summary <- summary(individual_model_all_nb1)
 individual_model_all_nb2_summary <- summary(individual_model_all_nb2)
+
+# save the model results
+
+individual_model_all_nb1_summary <- capture.output(summary(individual_model_all_nb1))
+writeLines(individual_model_all_nb1_summary, file.path(table_output_folder, "individual_model_all_nb1_summary.txt"))
+
+doc <- read_docx()
+for(line in individual_model_all_nb1_summary){doc <- body_add_par(doc, line, style = "Normal")}
+print(doc,target = file.path(table_output_folder,"individual_model_all_nb1_summary.docx"))
+
+summary(individual_model_all_nb1)$coefficients$cond %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column("Predictor") %>% 
+  flextable() %>% 
+  colformat_double(digits = 3) %>% 
+  add_footer_lines(
+    "Estimate = log-scale coefficient; Std. Error = standard error; z value = Wald z statistic; Pr(>|z|) = p-value."
+  ) %>% 
+  autofit() %>% 
+  save_as_docx(
+    path = file.path(table_output_folder, "individual_model_all_nb1_estimates.docx")
+  )
 
 individual_model_all_nb2_summary <- capture.output(summary(individual_model_all_nb2))
 writeLines(individual_model_all_nb2_summary, file.path(table_output_folder, "individual_model_all_nb2_summary.txt"))
 
-model1.emm <- emmeans(individual_model_all_nb2, specs="sex", weights="proportional")
-pairs(model1.emm) 
+doc <- read_docx()
+for(line in individual_model_all_nb2_summary){doc <- body_add_par(doc, line, style = "Normal")}
+print(doc,target = file.path(table_output_folder,"individual_model_all_nb2_summary.docx"))
+
+summary(individual_model_all_nb2)$coefficients$cond %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column("Predictor") %>% 
+  flextable() %>% 
+  colformat_double(digits = 3) %>% 
+  add_footer_lines(
+    "Estimate = log-scale coefficient; Std. Error = standard error; z value = Wald z statistic; Pr(>|z|) = p-value."
+  ) %>% 
+  autofit() %>% 
+  save_as_docx(
+    path = file.path(table_output_folder, "individual_model_all_nb2_estimates.docx")
+  )
+
+#check the model
+individual_model_all_nb1_diagnostics_plot <- check_model(individual_model_all_nb1, title_size = 8, base_size =7)
+individual_model_all_nb1_diagnostics_plot
+
+individual_model_all_nb2_diagnostics_plot <- check_model(individual_model_all_nb2, title_size = 8, base_size =7)
+individual_model_all_nb2_diagnostics_plot
+
+# saving the plot
+tiff(file = file.path(figure_output_folder, "individual_model_all_nb1_diagnostics.tiff"), 
+     width = 18, height = 18, units = "cm", res = 300)
+
+print(individual_model_all_nb1_diagnostics_plot)
+
+dev.off()
+
+tiff(file = file.path(figure_output_folder, "individual_model_all_nb2_diagnostics.tiff"), 
+     width = 18, height = 18, units = "cm", res = 300)
+
+print(individual_model_all_nb2_diagnostics_plot)
+
+dev.off()
 
 #with proportion data, beta regression 
 
@@ -475,14 +619,48 @@ individual_model_all_beta_complete <- glmmTMB(
 summary(individual_model_all_beta_complete)
 r2(individual_model_all_beta_complete)
 
+# save the model results
+
+individual_model_all_beta_complete_summary <- capture.output(summary(individual_model_all_beta_complete))
+writeLines(individual_model_all_beta_complete_summary, file.path(table_output_folder, "individual_model_all_beta_complete_summary.txt"))
+
+doc <- read_docx()
+for(line in individual_model_all_beta_complete_summary){doc <- body_add_par(doc, line, style = "Normal")}
+print(doc,target = file.path(table_output_folder,"individual_model_all_beta_complete_summary.docx"))
+
+summary(individual_model_all_beta_complete)$coefficients$cond %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column("Predictor") %>% 
+  flextable() %>% 
+  colformat_double(digits = 3) %>% 
+  add_footer_lines(
+    "Estimate = logit-scale coefficient; Std. Error = standard error; z value = Wald z statistic; Pr(>|z|) = p-value."
+  ) %>% 
+  autofit() %>% 
+  save_as_docx(
+    path = file.path(table_output_folder, "individual_model_all_beta_complete_estimates.docx")
+  )
+
+#check the model
+individual_model_all_beta_complete_diagnostics_plot <- check_model(individual_model_all_beta_complete, title_size = 8, base_size =7)
+individual_model_all_beta_complete_diagnostics_plot
+
+# saving the plot
+tiff(file = file.path(figure_output_folder, "individual_model_all_beta_complete_diagnostics.tiff"), 
+     width = 18, height = 18, units = "cm", res = 300)
+
+print(individual_model_all_beta_complete_diagnostics_plot)
+
+dev.off()
+
 ```
+
 
 #2.Dyad Level
 
 ## Permutation 
 
 ```{r create dyad color}
-
 colrs3 <- c(
             "same sex"="chocolate", 
             "opposite sex"="dimgray")
@@ -493,7 +671,6 @@ colrs3 <- c(
 
 2 dyad type permutation test 
 ```{r permutation 2 dyad types}
-
 set.seed(123)
 
 sex.list <- c("Female", "Female","Female","Female","Female",
@@ -560,7 +737,7 @@ p_low_same
 p_high_same <- (length(which(perm_results[, "same sex"] > obs_same)) + 1) / (t + 1)
 p_high_same
 
-return(c(p_low_opp = p_low_opp, p_high_opp = p_high_opp, p_low_same = p_low_same, p_high_same = p_high_same ))
+return(c(p_low_opp = p_low_opp, p_high_opp = p_high_opp, p_low_same = p_low_same, p_high_same = p_high_same))
 }
 
 
@@ -580,7 +757,6 @@ cat("\nGroup:", group_name, "\n")
 ```
 
 ### Plot permutation results 2 dyads of five groups
-
 
 ```{r plot permutation 2 dyads}
 
@@ -635,61 +811,44 @@ for (i in seq_along(split_dfs_Wrank)) {
     perm_results[i, "opposite sex"] <- ifelse("opposite sex" %in% perm_summary$perm_dyad,
                                               perm_summary$mean_events[perm_summary$perm_dyad=="opposite sex"], NA)
   }
-  
 
   perm2_dev_df <- rbind(perm2_dev_df,
                        data.frame(
                          group = group_name,
                          dyad_type = "same sex",
-                         deviation = obs_same - perm_results[, "same sex"]
+                         deviation = obs_same - perm_results[, "same sex"],
+                         obs = obs_same,
+                         perm = perm_results[, "same sex"]
                        ),
                        data.frame(
                          group = group_name,
                          dyad_type = "opposite sex",
-                         deviation = obs_opp - perm_results[, "opposite sex"] 
+                         deviation = obs_opp - perm_results[, "opposite sex"],
+                         obs = obs_opp,
+                         perm = perm_results[, "opposite sex"]
                        ))
 }
 
+perm2_dev_df %>% 
+  group_by(group, dyad_type) %>% 
+  summarise(
+    obs_val = first(obs),
+    prop_lower = mean(first(obs) <= perm)*100,
+    prop_higher = mean(first(obs) >= perm)*100,
+    mean = mean(perm),
+    q75 = quantile(perm, 0.75),
+    q25 = quantile(perm, 0.25),
+    max = max(perm),
+    min = min(perm),
+    .groups = "drop"
+  )
 
-dyad2_same_sex_violin <- ggplot(perm2_dev_df %>% filter(dyad_type=="same sex"),
-       aes(x = factor(group), y = deviation)) +
-  geom_violin(fill = "chocolate", alpha = 0.5, width = 1) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
-    theme_minimal()+
-  labs(x = "", y = "Observed mean - permutation mean") +
-  theme(
-    axis.title.y = element_text(size = 13),
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13))+
-  scale_x_discrete(position = "top",
-                   labels = c("G1","G2", "G3", "G4", "G5" ))
-
-ggsave(file.path(figure_output_folder, "dyad2_same_sex_violin.jpeg"), 
-       dyad2_same_sex_violin, 
-       device = "jpeg", 
-       width = 10, height = 10, units = "cm")
-
-
-dyad2_opp_sex_violin <- ggplot(perm2_dev_df %>% filter(dyad_type=="opposite sex"),
-       aes(x = factor(group), y = deviation)) +
-  geom_violin(fill = "dimgray", alpha = 0.5, width = 1) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
-  labs(x = "", y = "Observed mean - permutation mean") +
-  theme_minimal() +
-  theme(
-    axis.title.y = element_text(size = 13),
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13))+
-  scale_x_discrete(position = "top",
-                   labels = c("G1","G2", "G3", "G4", "G5" ))
-
-ggsave(file.path(figure_output_folder, "dyad2_opp_sex_violin.jpeg"), 
-       dyad2_opp_sex_violin, 
-       device = "jpeg", 
-       width = 10, height = 10, units = "cm")
-
-dyad2_violin <- plot_grid(dyad2_opp_sex_violin, dyad2_same_sex_violin)
-
+p_labels <- data.frame(
+  group = c("G2","G3"),
+  dyad_type = c("opposite sex", "opposite sex"),
+  label = c("p = 0.020", "p = 0.025"),
+  y = c(5, 5)  
+)
 
 facet_labels <- data.frame(
   dyad_type = c("opposite sex", "same sex"),
@@ -703,27 +862,42 @@ dyad2_violin <- ggplot(perm2_dev_df,
   scale_fill_manual(values = colrs3) + 
   geom_text(
     data = facet_labels, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
-    fontface = "bold", size = 6, hjust = 0, vjust = 1) +
+    fontface = "bold", size = 6, hjust = -0.8, vjust = 1) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+
+ geom_text(data = p_labels, aes(x = factor(group), y = y, label = label),inherit.aes = FALSE,size = 3)+
+
   labs(x = "", y = "Observed mean - permutation mean", fill = "Dyad type") +
   theme_minimal() +
   theme(
     axis.title.y = element_text(size = 13),
     axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
+    axis.text.y = element_text(size = 10),
     legend.text = element_text(size = 13),
     legend.title = element_text(size = 13),
-    plot.margin = margin(10, 50, 10, 50))+
+    legend.position = "bottom"#,
+    #plot.margin = margin(10, 50, 10, 50)
+    )+
   scale_x_discrete(
                    labels = c("G1","G2", "G3", "G4", "G5" )) +
-    theme(strip.text = element_text(size = 16, face = "bold")) 
+    theme(strip.text = element_text(size = 13, face = "bold"))+
+   theme(
+    panel.grid.major = element_blank() ,
+    panel.grid.minor = element_blank()
+  )+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.ticks.y = element_line(color = "black"),
+  axis.line.x.bottom = element_line(color = "black"),
+  axis.ticks.x = element_line(color = "black"),
+  axis.line = element_blank())
 
-
-
-ggsave(file.path(figure_output_folder, "dyad2_violin.jpeg"), 
+dyad2_violin
+  
+ggsave(file.path(figure_output_folder, "dyad2_violin.tiff"), 
        dyad2_violin, 
-       device = "jpeg", 
-       width = 20, height =10, units = "cm")
+       device = "tiff", 
+       width = 18, height = 10, units = "cm")
 
 ```
 
@@ -778,11 +952,12 @@ par(mfrow=c(2,2))
 obs_MM <- observed$mean_events[observed$dyad.sex1 == "male-male"]
 hist(perm_results[, "MM"], main = "MM dyad", xlab = "Aggression events")
 abline(v = obs_MM, lty=2, col="red", lwd=3)
+
+#one sided p values on both ends
 p_low_MM <- (length(which(perm_results[, "MM"] < obs_MM)) + 1) / (t + 1)
 p_low_MM
 p_high_MM <- (length(which(perm_results[, "MM"] > obs_MM)) + 1) / (t + 1)
 p_high_MM
-
 
 obs_FF <- observed$mean_events[observed$dyad.sex1 == "female-female"]
 hist(perm_results[, "FF"], main = "FF dyad", xlab = "Aggression events")
@@ -792,6 +967,7 @@ p_low_FF
 p_high_FF <- (length(which(perm_results[, "FF"] > obs_FF)) + 1) / (t + 1)
 p_high_FF
 
+
 obs_FM <- observed$mean_events[observed$dyad.sex1 == "female-male"]
 hist(perm_results[, "FM"], main = "FM dyad", xlab = "Aggression events")
 abline(v = obs_FM, lty=2, col="red", lwd=3)
@@ -800,7 +976,6 @@ p_low_FM
 p_high_FM <- (length(which(perm_results[, "FM"] > obs_FM)) + 1) / (t + 1)
 p_high_FM
 
-
 obs_MF <- observed$mean_events[observed$dyad.sex1 == "male-female"]
 hist(perm_results[, "MF"], main = "MF dyad", xlab = "Aggression events")
 abline(v = obs_MF, lty=2, col="red", lwd=3)
@@ -808,6 +983,12 @@ p_low_MF <- (length(which(perm_results[, "MF"] < obs_MF)) + 1) / (t + 1)
 p_low_MF
 p_high_MF <- (length(which(perm_results[, "MF"] > obs_MF)) + 1) / (t + 1)
 p_high_MF
+
+#two sided p values
+perm_centered_MF <- perm_results[, "MF"] - mean(perm_results[, "MF"])
+obs_centered_MF  <- obs_MF - mean(perm_results[, "MF"])
+p_two_MF <- (length(which(abs(perm_centered_MF) >= abs(obs_centered_MF))) + 1) / (t + 1)
+
 
 mtext(group_name, side = 3, line = -2, outer = TRUE)
 
@@ -895,24 +1076,46 @@ for (i in seq_along(split_dfs_Wrank)) {
                        data.frame(
                          group = group_name,
                          dyad_type = "FF",
-                         deviation =  obs_FF - perm_results[, "FF"]
+                         obs = obs_FF,
+                         deviation =  obs_FF - perm_results[, "FF"],
+                         perm = perm_results[, "FF"]
                        ),
                        data.frame(
                          group = group_name,
                          dyad_type = "FM",
-                         deviation = obs_FM - perm_results[, "FM"]
+                         obs = obs_FM,
+                         deviation = obs_FM - perm_results[, "FM"],
+                         perm = perm_results[, "FM"]
                        ),
                        data.frame(
                          group = group_name,
                          dyad_type = "MM",
-                         deviation = obs_MM - perm_results[, "MM"] 
+                         obs = obs_MM,
+                         deviation = obs_MM - perm_results[, "MM"],
+                         perm = perm_results[, "MM"]
                        ),
                        data.frame(
                          group = group_name,
                          dyad_type = "MF",
-                         deviation = obs_MF - perm_results[, "MF"]
+                         obs = obs_MF,
+                         deviation = obs_MF - perm_results[, "MF"],
+                         perm = perm_results[, "MF"]
                        ))
 }
+
+ perm4_dev_df %>% 
+  group_by(group, dyad_type) %>% 
+  summarise(
+    obs_val = first(obs),
+    prop_lower = mean(perm < first(obs))*100,
+    prop_higher = mean(perm > first(obs))*100,
+    mean = mean(perm),
+    q75 = quantile(perm, 0.75),
+    q25 = quantile(perm, 0.25),
+    max = max(perm),
+    min = min(perm),
+    .groups = "drop"
+  )
 
 colrs2 <- c("FM"="#a6611a", 
             "MF"="#dfc27d", 
@@ -945,33 +1148,54 @@ colrs4 <- c("female-male"="#a6611a",
             "female-female"="#80cdc1", 
             "male-male"="#018571")
   
+#p_labels4 <- data.frame(
+# group = c("G3","G5"),
+# dyad_type = c("male-male", "male-male"),
+# label = c("p = 0.059", "p = 0.070"),
+# y = c(-15, -15)  )
+
 dyad4_violin <- ggplot(perm4_dev_df,
                        aes(x = factor(group), y = deviation, fill = factor(dyad_type))) +
   geom_violin(alpha = 0.5,  width = 1) +            
   facet_wrap(~factor(dyad_type, c("female-male", "male-female", "female-female", "male-male")), nrow = 2, ncol = 2) +
+    theme_minimal()+
   scale_fill_manual(values = colrs4) + 
   geom_text(
     data = facet_labels4, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
-    fontface = "bold", size = 6, hjust = 0, vjust = 1) +
+    fontface = "bold", size = 6, hjust = -0.8, vjust = 1) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+ # geom_text(data = p_labels4, aes(x = factor(group), y = y, label = label),inherit.aes = FALSE,size = 3)+
   labs(x = "", y = "Observed mean - permutation mean", fill = "Dyad type") +
   theme_minimal() +
   theme(
     axis.title.y = element_text(size = 13),
     axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13),
+    axis.text.y = element_text(size = 10),
     legend.text = element_text(size = 13),
     legend.title = element_text(size = 13),
-    plot.margin = margin(10, 50, 10, 50))+
+    legend.position = "bottom"
+    )+
   scale_x_discrete(
                    labels = c("G1","G2", "G3", "G4", "G5" )) +
-    theme(strip.text = element_text(size = 16, face = "bold")) 
+    theme(strip.text = element_text(size = 13, face = "bold")) +
+   theme(
+    panel.grid.major = element_blank() ,
+    panel.grid.minor = element_blank()
+  )+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.ticks.y = element_line(color = "black"),
+  axis.line.x.bottom = element_line(color = "black"),
+  axis.ticks.x = element_line(color = "black"),
+  axis.line = element_blank()
+)
 
+dyad4_violin
 
-ggsave(file.path(figure_output_folder, "dyad4_violin.jpeg"), 
+ggsave(file.path(figure_output_folder, "dyad4_violin.tiff"), 
        dyad4_violin, 
-       device = "jpeg", 
-       width = 20, height =10, units = "cm")
+       device = "tiff", 
+       width = 18, height =13, units = "cm")
 
 ```
 
@@ -991,13 +1215,26 @@ power_sex_model_boxplot_all <-
   theme_minimal() +
   theme(legend.position="none") +
   theme(
-    axis.title.y = element_text(size = 15),
-    axis.text.x = element_text(size = 15)
-  )
+    axis.title.y = element_text(size = 16),
+    axis.text.y = element_text(size = 13),
+    axis.text.x = element_text(size = 16)
+  )+
+   theme(
+    panel.grid.major = element_blank() ,
+    panel.grid.minor = element_blank()
+  )+
+   theme(
+  axis.line.y.left = element_line(color = "black"),
+  axis.line.x.bottom = element_line(color = "black"),
+  axis.ticks = element_line(color = "black"),
+  axis.line = element_blank()
+)
 
-ggsave(file.path(figure_output_folder, "power_sex_model_boxplot_all.jpeg"), 
+power_sex_model_boxplot_all
+
+ggsave(file.path(figure_output_folder, "power_sex_model_boxplot_all.tiff"), 
        power_sex_model_boxplot_all, 
-       device = "jpeg", 
+       device = "tiff", 
        width = 10, height = 10, units = "cm")
 
 ```
@@ -1023,21 +1260,44 @@ performance::check_singularity(power_sex_model_all)
 power_sex_model_all_summary <- capture.output(summary(power_sex_model_all))
 writeLines(power_sex_model_all_summary, file.path(table_output_folder, "power_sex_model_all_summary.txt"))
 
+doc <- read_docx()
+for(line in power_sex_model_all_summary){doc <- body_add_par(doc, line, style = "Normal")}
+print(doc,target = file.path(table_output_folder,"power_sex_model_all_summary.docx"))
+
+summary(power_sex_model_all)$coefficients %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column("Predictor") %>% 
+  flextable::flextable() %>% 
+  flextable::colformat_double(digits = 3) %>% 
+  flextable::add_footer_lines(
+    "Estimate = coefficient; Std. Error = standard error; z value = t statistic; Pr(>|z|) = p-value."
+  ) %>% 
+  flextable::autofit() %>% 
+  flextable::save_as_docx(
+    path = file.path(table_output_folder, "power_sex_model_all_estimates.docx")
+  )
+
+
 #check the model
-power_sex_model_all_diagnostics_plot <- check_model(power_sex_model_all)
+
+power_sex_model_all_diagnostics_plot <- check_model(power_sex_model_all, title_size = 8, base_size =7) 
 power_sex_model_all_diagnostics_plot
 
 # saving the plot
-jpeg(file = file.path(figure_output_folder, "power_sex_model_all_diagnostics.jpeg"), 
-     width = 18, height = 25, units = "cm", res = 300)
+tiff(file = file.path(figure_output_folder, "power_sex_model_all_diagnostics.tiff"), 
+     width = 18, height = 18, units = "cm", res = 300)
 
 print(power_sex_model_all_diagnostics_plot)
 
 dev.off()
 
 ```
+
 LM - 5 groups separately
 ```{r group separate model }
+shapiro.test(rank_df_all$power) #Normality violation
+bartlett.test(power~ groupID, data = rank_df_all)
+
 
 power_sex_lm <- function(df) {
   
@@ -1052,7 +1312,9 @@ rank_df <- bind_rows(df1, df2) %>%
   left_join(bird.list %>% select(Color, Sex), by = c("birdID" = "Color")) 
 
 power_sex_model <- lm(power ~ Sex, data = rank_df)
-return(power_sex_model) 
+check <- check_model(power_sex_model)
+print(check) 
+return(power_sex_model)
 }
 
 model_summaries <- list()
@@ -1091,6 +1353,8 @@ combined_df <- combined_df %>%
 combined_df <- combined_df %>%
   select(Group, estimate, conf.low, conf.high, p.value) %>% 
   mutate(across(where(is.numeric), ~ signif(.x, 2)))
+
+combined_df
 
 
 flextable(combined_df) %>% 
@@ -1157,18 +1421,21 @@ V(atnet)$color <- colrs[V(atnet)$sex]
 pad_x <- 0.03
 pad_y <- 0.005
 
-par(mar = c(1.5,6,2,0))   # tighten margins
+par(mar = c(2, 4.5, 2, 0))
+#par(mar = c(1.5,6,2,0))   # tighten margins
 
 plot(NULL, 
-     xlim=c(1,1), ylim=c(0,2), 
+     #xlim=c(1,1), 
+     xlim=c(0.8, 1.2),
+     ylim=c(0,2), 
      ylab="Power score", xlab="",
-     cex.axis=0.2,
+     cex.axis=1,
      cex.lab=2,
      axes = FALSE,
      xaxt = "n")
 #box()
 axis(1, at = 1, cex.axis=1, label = FALSE)
-axis(2, at = seq(0,2, 0.25),las=1,  cex.axis=1)
+axis(2, at = seq(0,2, 0.25),las=1,  cex.axis=1.3)
 abline(v = 1, lwd=1.5, col = "black")
 
 # Set node size, label size, tie width
@@ -1192,26 +1459,26 @@ edge.curved=E(atnet)$edge.curved,
 edge.loop.angle=0,
 edge.color= E(atnet)$dcolor, #this sets the edge color, based on the colors set above
 axes=TRUE,
-xlim=c(1,1),
+#xlim=c(1,1),
+xlim=c(0.8, 1.2),
 ylim=c(-0.25,2.5)
 )
-text(x=1.05, y=0, label=paste0("N: ", ntotal$ntotal), adj = c(0,0), font = 3, cex=2, pch = 100)
+text(x=1.05, y=0, label=paste0("N = ", ntotal$ntotal), adj = c(0,0), font = 3, cex=2, pch = 100)
 title(main = group_name, cex.main = 3)
 
 }
 
 
 
-jpeg(file.path(figure_output_folder, "hierarchy_all_groups.jpeg"),
-     width=25, height=15, units="cm", res=300)
+tiff(file.path(figure_output_folder, "hierarchy_all_groups.tiff"),
+     width=25, height=25, units="cm", res=300)
 
 ncol <- 3
 nrow <- 2
 
 par(mfrow = c(nrow, ncol),
-  mar = c(0, 0, 0, 0),
-  oma = c(0, 0, 0, 0)
-)
+    mar = c(2, 2, 2, 1), 
+    oma = c(2, 2, 2, 2)) 
 
 for (group_name in names(split_dfs_Wrank)) {
   this_df <- split_dfs_Wrank[[group_name]]
@@ -1220,9 +1487,9 @@ for (group_name in names(split_dfs_Wrank)) {
 
 plot.new()   
 
-legend("topleft", legend = c("Female", "Male"), pch = 21, pt.bg = c("#F8766D", "#00BFC4"), title = "Sex", bty = "n",cex = 2)
+legend(x = 0, y = 0.7, legend = c("Female", "Male"), pch = 21, pt.bg = c("#F8766D", "#00BFC4"), title = "Sex", bty = "n",cex = 2)
 
-legend("bottomleft", legend = c("same sex", "opposite sex"), col = c("chocolate", "dimgray"),lwd = 2, title = "Dyad types", bty = "n", cex = 2)
+legend(x = 0, y = 0.4, legend = c("same sex", "opposite sex"), col = c("chocolate", "dimgray"),lwd = 2, title = "Dyad types", bty = "n", cex = 2)
 
 dev.off()
 
